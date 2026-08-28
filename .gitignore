@@ -21,14 +21,15 @@ venv.bak/
 *~
 
 logs*/
-models/
-visualizations/
-visualizations_legacy/
+
+# results/ (gráficos e vídeos versionados no README) e models/ (código-fonte)
+# NÃO são ignorados.
 
 *.log
 *.stdout.txt
 *.stderr.txt
 *.txt
+!requirements.txt
 
 .DS_Store
 Thumbs.db

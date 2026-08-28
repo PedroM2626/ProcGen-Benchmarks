@@ -72,10 +72,10 @@ def run_side_by_side(benchmark='world_models', game='bossfight', log_dir='./logs
     writer = None
     if mode == 'mp4':
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        # cada obs CHW 3x64x64 -> HWC 64x64, hstack 4 -> 256x64
-        h, w = 64, 64
+        # cada painel é resize para 128x128; canvas = 2 linhas (real em cima, dream embaixo)
+        h, w = 128, 128
         total_w = w * len(envs)
-        writer = cv2.VideoWriter(out, fourcc, fps, (total_w, h*2))  # *2 para legenda
+        writer = cv2.VideoWriter(out, fourcc, fps, (total_w, h*2))  # *2 para linha de sonho
 
     for step in range(steps):
         frames = []

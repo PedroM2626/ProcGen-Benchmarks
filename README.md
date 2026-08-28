@@ -82,15 +82,30 @@
 
 ## 4. Gráficos e Vídeos
 
-- **Gráficos por ambiente:** `logs_suite/suite_bossfight_plot.png`, `suite_starpilot_plot.png`, `suite_dodgeball_plot.png` (`14×5` barras `mean±std`), `logs_procgen/comparison_coinrun_*/comparison_plot.png`, `logs_world_models/comparison_bossfight_*/comparison_plot.png` (`compare_suite.py:15`).
-- **Geral:** `logs_suite/suite_geral_*.png` (média 3 jogos por arquitetura).
-- **Jornada:** `statistics.json` + `comparison_results.json` por `comparison_*` + `tensorboard --logdir logs_suite` (curva `reward` vs `timesteps` por `seed`).
-- **Vídeos lado-a-lado tempo real:** `visualize_side_by_side.py:1` — `human` (`cv2.imshow` `128×128` `hstack` `4` agentes) ou `mp4` (`cv2.VideoWriter` `15 FPS`). Com **sonhos**: `top=real` `bottom=dream` (`VAE/AE/Recon` `dream()` `deconv` `models/world_model_extractors.py:6`, `Contrastive` `no dream`). Requer `.zip` salvo (`compare_world_models.py:55` `model.save()` após patch `09:57`).
+Todos os gráficos e vídeos estão versionados na pasta `results/`.
+
+### 4.1. Coinrun 50k — CNN vs MLP (com/sem visão)
+![Coinrun 50k — CNN vs MLP](results/coinrun_50k_cnn_vs_mlp.png)
+
+### 4.2. Bossfight 100k — World Models
+![Bossfight 100k — World Models](results/bossfight_100k_world_models.png)
+
+### 4.3. Suite 100k — 3 Jogos × 11 Arquiteturas
+| Bossfight | Starpilot | Dodgeball |
+|---|---|---|
+| ![Suite Bossfight](results/suite_bossfight.png) | ![Suite Starpilot](results/suite_starpilot.png) | ![Suite Dodgeball](results/suite_dodgeball.png) |
+
+### 4.4. Bossfight HARD 100k — Stress Test
+![Bossfight HARD 100k](results/bossfight_hard_100k.png)
+
+### 4.5. Vídeos
+
+Vídeos lado-a-lado são gerados sob demanda (`visualize_side_by_side.py`) — bossfight com **sonhos** (`top=real`, `bottom=dream()` de `VAE/AE/Recon`; Contrastive exibe `no dream`) e coinrun com agentes lado-a-lado. Requer os `.zip` salvos pelos benchmarks durante o treino:
   ```powershell
-  py -3.10 visualize_side_by_side.py --benchmark world_models --game bossfight --log_dir ./logs_world_models --mode mp4 --out bossfight_dreams.mp4 --steps 1000
-  py -3.10 visualize_side_by_side.py --benchmark procgen --game coinrun --log_dir ./logs_procgen --mode mp4 --out coinrun_side.mp4 --steps 1000
-  tensorboard --logdir logs_suite
+  py -3.10 visualize_side_by_side.py --benchmark world_models --game bossfight --log_dir ./logs_world_models --mode mp4 --out results/bossfight_dreams.mp4 --steps 600 --device cuda
+  py -3.10 visualize_side_by_side.py --benchmark procgen --game coinrun --log_dir ./logs_procgen --mode mp4 --out results/coinrun_side_by_side.mp4 --steps 600 --device cuda
   ```
+- **Curvas de treino por seed:** `statistics.json` + `comparison_results.json` por benchmark + `tensorboard --logdir logs_suite` (logs tensorboard são descartáveis/gerados sob demanda).
 
 ---
 
@@ -168,14 +183,7 @@ Todos `discretos` (`Discrete(15)`) exceto `Walker` `contínuo`; `easy 200` trein
 
 ## 8. Vídeos
 
-Gerados sob demanda (requer `.zip` salvo após patch `09:57`):
-```powershell
-# 4 agentes World Models bossfight com sonhos (top=real, bottom=dream)
-py -3.10 visualize_side_by_side.py --benchmark world_models --game bossfight --log_dir ./logs_world_models --mode mp4 --out bossfight_dreams.mp4 --steps 1000
-# Suite 3 jogos lado-a-lado
-py -3.10 visualize_side_by_side.py --benchmark procgen --game coinrun --log_dir ./logs_procgen --mode mp4 --out coinrun_side.mp4 --steps 1000
-```
-Saída `mp4` `128×128` por agente `hstack` `15 FPS` `~30s` em `side_by_side.mp4`; `dream` para `VAE/AE/Recon` (`models/world_model_extractors.py:6` `dream()` `deconv`), `Contrastive` exibe `no dream`.
+Gerados sob demanda via `visualize_side_by_side.py` (comandos na seção 4.5): `bossfight_dreams.mp4` (World Models com sonhos) e `coinrun_side_by_side.mp4` (CNN vs MLP lado-a-lado). Saída `mp4` com painéis `128×128` por agente `hstack` `15 FPS`; `dream` para `VAE/AE/Recon` (`models/world_model_extractors.py:6` `dream()` `deconv`), `Contrastive` exibe `no dream`. Requer os `.zip` salvos durante o treino dos benchmarks.
 
 ## 9. Hardware e Limitações
 
