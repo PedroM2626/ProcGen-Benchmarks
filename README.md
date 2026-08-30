@@ -36,6 +36,8 @@
 | 3 | `compare_suite.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | `4 WM +4 CNN +3 Augment =11` por jogo | `~8h` `16.5M steps` `20:41→04:47` | `logs_suite/suite_bossfight_starpilot_dodgeball_20260827_204109` |
 | 4 | `compare_bossfight_hard.py` | `bossfight hard` | `100k` | `5` | `11` | `~2.5h` `07:21→09:57` | `logs_bossfight_hard/comparison_bossfight_hard_20260828_072148` |
 | 5 | `compare_augment_contrastive.py` | `bossfight` | `100k` | `5` | `crop/color/noise` | `~80 min` (embutido no suite) | `logs_suite` `*_aug_*` |
+| 6 | `compare_new_archs.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | `impala/impoola/lstm_attention/vit/resnet18` | `~12h` `13:45→01:39` `7.5M` | `logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545` |
+| 7 | `compare_maze_heist.py` | `maze+heist` | `100k` | `5` | `ppo/icm/rnd/ngu` | `~6.5h` `01:48→08:23` `4M` | `logs_maze_heist/maze_heist_maze_heist_20260829_014802` |
 
 ---
 
@@ -78,6 +80,39 @@
 | `cnn` | `0.02±0.04` (`classic/cbam/spatial` zeram) |
 > `hard` achata tudo para `0.0-0.4` (`easy` era `0.5-0.76`), `CNN` zera em `100k` — `hard` precisaria `200k` (`~6h`) e não vale `suite hard` completa; `easy` já é `benchmark justo`.
 
+### 3.5. New Archs 100k — 5 Novas Arquiteturas ×3 Jogos
+`logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545/statistics.json:1`
+| Jogo | Melhor | Mean | 2º | Pior |
+|---|---|---:|---|---|
+| `bossfight` | `lstm 0.36±0.57` | `vit 0.30` `impala 0.28` | `resnet 0.02` | `impoola 0.06` |
+| `starpilot` | `lstm 2.44±0.56` | `resnet 2.28` `impoola 2.2` | `vit 2.1` `impala 1.78` | — |
+| `dodgeball` | `resnet 1.72±0.65` | `vit 1.2` `impoola 1.12` | `impala 1.08` | `lstm 0.80` |
+> `ViT`/`ResNet` não superam `spatial 2.6` `starpilot` nem `classic 1.48` `dodgeball`; `lstm` vence `bossfight`/`starpilot` mas perde `dodgeball`.
+
+### 3.6. Maze+Heist 100k — PPO vs ICM vs RND vs NGU (Exploração)
+`logs_maze_heist/maze_heist_maze_heist_20260829_014802/statistics.json:1`
+| Jogo | `ppo` | `icm` | `rnd` | `ngu` |
+|---|---:|---:|---:|---:|
+| `maze` | **2.4±1.49** | 1.8±1.46 | **2.4±1.49** | **2.4±1.49** |
+| `heist` | **0.8±0.74** | 0.6±0.80 | **0.8±0.74** | **0.8±0.74** |
+> `ICM` pior que `PPO` puro (`maze` `1.8` vs `2.4`, `heist` `0.6` vs `0.8`), `RND`/`NGU` empatam `PPO` — `100k` insuficiente para `curiosidade` brilhar em `maze`/`heist` `easy`; `NGU` não supera `RND` (`memória` não ajuda com `200` níveis). `heist` `0.8` confirma `sparse` hierárquico (`3 chaves`) precisa `>100k`.
+
+### 3.7. Global 16 Arquiteturas — Média 3 Jogos (Bossfight+Starpilot+Dodgeball 100k 5 Seeds)
+`logs_suite` + `logs_new_archs` agregados (`16.5M+7.5M` steps) — `mean` de `3` `means` por arquitetura:
+| Rank | Arquitetura | Global Mean | Por Jogo (B/S/D) |
+|---:|---|---:|---|
+| 1 | `spatial` | **1.54** | 0.76 / 2.60 / 1.28 |
+| 2 | `resnet18` | 1.34 | 0.02 / 2.28 / 1.72 |
+| 3 | `classic` | 1.33 | 0.54 / 1.98 / 1.48 |
+| 4 | `cbam` | 1.33 | 0.58 / 2.10 / 1.31 |
+| 5 | `mlp_vector` | 1.25 | 0.58 / 2.07 / 1.11 |
+| 6 | `lstm_attention` | 1.20 | 0.36 / 2.44 / 0.80 |
+| 7 | `vit` | 1.20 | 0.30 / 2.10 / 1.20 |
+| 8 | `aug_crop` | 1.16 | 0.54 / 2.12 / 0.84 |
+| 9 | `impoola` | 1.12 | 0.06 / 2.20 / 1.12 |
+| 10 | `ae` | 1.11 | 0.30 / 2.08 / 0.96 |
+> `Top 3` são `CNN` puros (`spatial`/`resnet`/`classic`); `World Models` (`vae 0.88` `recon 0.90`) e `contrastive 0.97` ficam abaixo de `MLP 1.25` em `suite 100k` `easy` — `CV` com `attention` ainda vence `World Model` em `Procgen` `100k`.
+
 ---
 
 ## 4. Gráficos e Vídeos
@@ -98,7 +133,16 @@ Todos os gráficos e vídeos estão versionados na pasta `results/`.
 ### 4.4. Bossfight HARD 100k — Stress Test
 ![Bossfight HARD 100k](results/bossfight_hard_100k.png)
 
-### 4.5. Vídeos
+### 4.5. New Archs 100k — 5 Novas Arquiteturas ×3 Jogos
+![New Archs Bossfight](results/new_archs_bossfight.png) | ![New Archs Starpilot](results/new_archs_starpilot.png) | ![New Archs Dodgeball](results/new_archs_dodgeball.png)
+
+### 4.6. Maze+Heist 100k — PPO vs ICM/RND/NGU
+![Maze](results/maze_heist_maze_plot.png) | ![Heist](results/maze_heist_heist_plot.png)
+
+### 4.7. Global 16 — Média 3 Jogos
+![Global 16](results/global_16.png)
+
+### 4.8. Vídeos
 
 Vídeos lado-a-lado são gerados sob demanda (`visualize_side_by_side.py`) — bossfight com **sonhos** (`top=real`, `bottom=dream()` de `VAE/AE/Recon`; Contrastive exibe `no dream`) e coinrun com agentes lado-a-lado. Requer os `.zip` salvos pelos benchmarks durante o treino:
   ```powershell
@@ -180,6 +224,21 @@ Todos `discretos` (`Discrete(15)`) exceto `Walker` `contínuo`; `easy 200` trein
 | `aug_noise` | 0.0 | 0.0 | 0.0 | 0.0 | 0.3 | 0.06±0.12 |
 
 **Suite 100k 3 Jogos (11 configs×3×5=165 entradas)** `logs_suite/suite_bossfight_starpilot_dodgeball_20260827_204109/suite_results.json:1` — `mean` em `suite_statistics.json:1`; ex `starpilot spatial: [1.6,2.1,2.2,3.2,3.5] 2.6±0.82`, `dodgeball classic: [0.8,1.0,1.4,1.5,2.7] 1.48±0.69`. Full `165` linhas preservadas em `suite_results.json` para `LaTeX`.
+
+**New Archs 100k 3 Jogos (5×3×5=75 entradas)** `logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `bossfight_impala` | 0.0 | 0.0 | 0.0 | 0.2 | 1.2 | 0.28 |
+| `starpilot_lstm` | 2.3 | 2.9 | 1.4 | 2.7 | 2.9 | **2.44±0.56** |
+| `dodgeball_resnet` | 1.2 | 1.2 | 1.4 | 1.6 | 3.0 | **1.72±0.65** |
+
+**Maze+Heist 100k 2 Jogos (4×2×5=40 entradas)** `logs_maze_heist/maze_heist_maze_heist_20260829_014802/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `maze_ppo` | 1.0 | 1.0 | 2.0 | 3.0 | 5.0 | **2.4±1.49** |
+| `maze_icm` | 0.0 | 1.0 | 1.0 | 3.0 | 4.0 | 1.8±1.46 |
+| `heist_ppo` | 0.0 | 0.0 | 1.0 | 1.0 | 2.0 | **0.8±0.74** |
+| `heist_icm` | 0.0 | 0.0 | 0.0 | 1.0 | 2.0 | 0.6±0.80 |
 
 ## 8. Vídeos
 
