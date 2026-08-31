@@ -1,0 +1,464 @@
+{
+  "deltas": {
+    "bossfight_aug_color": {
+      "v30": 0.2,
+      "v100": 0.218
+    },
+    "bossfight_aug_crop": {
+      "v30": 0.68,
+      "v100": 0.676
+    },
+    "bossfight_aug_noise": {
+      "v30": 0.48,
+      "v100": 0.544
+    },
+    "bossfight_cnn_cbam": {
+      "v30": 0.4,
+      "v100": 0.434
+    },
+    "bossfight_cnn_classic": {
+      "v30": 0.213,
+      "v100": 0.194
+    },
+    "bossfight_cnn_mlp_vector": {
+      "v30": 0.373,
+      "v100": 0.534
+    },
+    "bossfight_cnn_spatial": {
+      "v30": 0.36,
+      "v100": 0.44
+    },
+    "bossfight_impala": {
+      "v30": 0.327,
+      "v100": 0.39
+    },
+    "bossfight_impoola": {
+      "v30": 0.253,
+      "v100": 0.306
+    },
+    "bossfight_lstm_attention": {
+      "v30": 0.32,
+      "v100": 0.422
+    },
+    "bossfight_resnet18": {
+      "v30": 0.387,
+      "v100": 0.42
+    },
+    "bossfight_vit": {
+      "v30": 0.287,
+      "v100": 0.268
+    },
+    "bossfight_wm_ae": {
+      "v30": 0.16,
+      "v100": 0.146
+    },
+    "bossfight_wm_contrastive": {
+      "v30": 0.48,
+      "v100": 0.544
+    },
+    "bossfight_wm_recon": {
+      "v30": 0.247,
+      "v100": 0.256
+    },
+    "bossfight_wm_vae": {
+      "v30": 0.122,
+      "v100": 0.463
+    },
+    "starpilot_aug_color": {
+      "v30": 1.787,
+      "v100": 1.918
+    },
+    "starpilot_aug_crop": {
+      "v30": 2.2,
+      "v100": 2.226
+    },
+    "starpilot_aug_noise": {
+      "v30": 1.753,
+      "v100": 1.638
+    },
+    "starpilot_cnn_cbam": {
+      "v30": 2.16,
+      "v100": 2.186
+    },
+    "starpilot_cnn_classic": {
+      "v30": 2.2,
+      "v100": 2.252
+    },
+    "starpilot_cnn_mlp_vector": {
+      "v30": 2.493,
+      "v100": 2.666
+    },
+    "starpilot_cnn_spatial": {
+      "v30": 2.627,
+      "v100": 2.454
+    },
+    "starpilot_impala": {
+      "v30": 2.0,
+      "v100": 1.87
+    },
+    "starpilot_impoola": {
+      "v30": 2.44,
+      "v100": 2.282
+    },
+    "starpilot_lstm_attention": {
+      "v30": 2.633,
+      "v100": 2.428
+    },
+    "starpilot_resnet18": {
+      "v30": 2.527,
+      "v100": 2.44
+    },
+    "starpilot_vit": {
+      "v30": 1.88,
+      "v100": 2.022
+    },
+    "starpilot_wm_ae": {
+      "v30": 2.167,
+      "v100": 2.02
+    },
+    "starpilot_wm_contrastive": {
+      "v30": 1.753,
+      "v100": 1.638
+    },
+    "starpilot_wm_recon": {
+      "v30": 1.967,
+      "v100": 2.076
+    },
+    "starpilot_wm_vae": {
+      "v30": 1.733,
+      "v100": 1.87
+    },
+    "dodgeball_aug_color": {
+      "v30": 1.067,
+      "v100": 0.884
+    },
+    "dodgeball_aug_crop": {
+      "v30": 1.04,
+      "v100": 0.86
+    },
+    "dodgeball_aug_noise": {
+      "v30": 0.88,
+      "v100": 0.768
+    },
+    "dodgeball_cnn_cbam": {
+      "v30": 1.147,
+      "v100": 1.076
+    },
+    "dodgeball_cnn_classic": {
+      "v30": 1.067,
+      "v100": 0.96
+    },
+    "dodgeball_cnn_mlp_vector": {
+      "v30": 1.213,
+      "v100": 1.076
+    },
+    "dodgeball_cnn_spatial": {
+      "v30": 1.067,
+      "v100": 0.936
+    },
+    "dodgeball_impala": {
+      "v30": 1.04,
+      "v100": 0.94
+    },
+    "dodgeball_impoola": {
+      "v30": 1.053,
+      "v100": 0.928
+    },
+    "dodgeball_lstm_attention": {
+      "v30": 0.987,
+      "v100": 0.94
+    },
+    "dodgeball_resnet18": {
+      "v30": 1.067,
+      "v100": 1.156
+    },
+    "dodgeball_vit": {
+      "v30": 0.907,
+      "v100": 0.732
+    },
+    "dodgeball_wm_ae": {
+      "v30": 1.053,
+      "v100": 0.9
+    },
+    "dodgeball_wm_contrastive": {
+      "v30": 0.88,
+      "v100": 0.768
+    },
+    "dodgeball_wm_recon": {
+      "v30": 0.933,
+      "v100": 1.02
+    },
+    "dodgeball_wm_vae": {
+      "v30": 0.907,
+      "v100": 0.944
+    },
+    "maze_icm": {
+      "v30": 2.8,
+      "v100": 2.76
+    },
+    "maze_ngu": {
+      "v30": 2.467,
+      "v100": 2.8
+    },
+    "maze_ppo": {
+      "v30": 2.467,
+      "v100": 2.8
+    },
+    "maze_rnd": {
+      "v30": 2.467,
+      "v100": 2.8
+    },
+    "heist_icm": {
+      "v30": 0.733,
+      "v100": 0.72
+    },
+    "heist_ngu": {
+      "v30": 0.667,
+      "v100": 0.72
+    },
+    "heist_ppo": {
+      "v30": 0.667,
+      "v100": 0.72
+    },
+    "heist_rnd": {
+      "v30": 0.667,
+      "v100": 0.72
+    }
+  },
+  "rank_changes": {
+    "bossfight": {
+      "bossfight_impala": [
+        8,
+        10
+      ],
+      "bossfight_lstm_attention": [
+        9,
+        8
+      ],
+      "bossfight_resnet18": [
+        5,
+        9
+      ],
+      "bossfight_vit": [
+        10,
+        12
+      ],
+      "bossfight_cnn_cbam": [
+        4,
+        7
+      ],
+      "bossfight_cnn_classic": [
+        13,
+        15
+      ],
+      "bossfight_cnn_mlp_vector": [
+        6,
+        4
+      ],
+      "bossfight_cnn_spatial": [
+        7,
+        6
+      ],
+      "bossfight_wm_ae": [
+        15,
+        16
+      ],
+      "bossfight_wm_recon": [
+        12,
+        13
+      ],
+      "bossfight_wm_vae": [
+        16,
+        5
+      ]
+    },
+    "starpilot": {
+      "starpilot_impala": [
+        10,
+        14
+      ],
+      "starpilot_lstm_attention": [
+        1,
+        4
+      ],
+      "starpilot_vit": [
+        12,
+        10
+      ],
+      "starpilot_aug_color": [
+        13,
+        12
+      ],
+      "starpilot_aug_crop": [
+        6,
+        7
+      ],
+      "starpilot_aug_noise": [
+        14,
+        15
+      ],
+      "starpilot_cnn_cbam": [
+        9,
+        8
+      ],
+      "starpilot_cnn_classic": [
+        7,
+        6
+      ],
+      "starpilot_cnn_mlp_vector": [
+        4,
+        1
+      ],
+      "starpilot_wm_ae": [
+        8,
+        11
+      ],
+      "starpilot_wm_contrastive": [
+        15,
+        16
+      ],
+      "starpilot_wm_recon": [
+        11,
+        9
+      ],
+      "starpilot_wm_vae": [
+        16,
+        13
+      ]
+    },
+    "dodgeball": {
+      "dodgeball_impala": [
+        9,
+        7
+      ],
+      "dodgeball_impoola": [
+        8,
+        10
+      ],
+      "dodgeball_lstm_attention": [
+        11,
+        8
+      ],
+      "dodgeball_resnet18": [
+        4,
+        1
+      ],
+      "dodgeball_vit": [
+        13,
+        16
+      ],
+      "dodgeball_aug_color": [
+        5,
+        12
+      ],
+      "dodgeball_aug_crop": [
+        10,
+        13
+      ],
+      "dodgeball_aug_noise": [
+        15,
+        14
+      ],
+      "dodgeball_cnn_classic": [
+        3,
+        5
+      ],
+      "dodgeball_cnn_mlp_vector": [
+        1,
+        3
+      ],
+      "dodgeball_cnn_spatial": [
+        6,
+        9
+      ],
+      "dodgeball_wm_ae": [
+        7,
+        11
+      ],
+      "dodgeball_wm_contrastive": [
+        16,
+        15
+      ],
+      "dodgeball_wm_recon": [
+        12,
+        4
+      ],
+      "dodgeball_wm_vae": [
+        14,
+        6
+      ]
+    },
+    "maze": {
+      "maze_icm": [
+        1,
+        4
+      ],
+      "maze_ngu": [
+        2,
+        1
+      ],
+      "maze_ppo": [
+        3,
+        2
+      ],
+      "maze_rnd": [
+        4,
+        3
+      ]
+    },
+    "heist": {
+      "heist_icm": [
+        1,
+        4
+      ],
+      "heist_ngu": [
+        2,
+        1
+      ],
+      "heist_ppo": [
+        3,
+        2
+      ],
+      "heist_rnd": [
+        4,
+        3
+      ]
+    }
+  },
+  "global100": {
+    "wm_contrastive": 0.983,
+    "aug_noise": 0.983,
+    "impoola": 1.172,
+    "cnn_mlp_vector": 1.425,
+    "wm_recon": 1.117,
+    "cnn_spatial": 1.277,
+    "cnn_cbam": 1.232,
+    "aug_crop": 1.254,
+    "impala": 1.067,
+    "aug_color": 1.007,
+    "cnn_classic": 1.135,
+    "wm_vae": 1.092,
+    "wm_ae": 1.022,
+    "resnet18": 1.339,
+    "lstm_attention": 1.263,
+    "vit": 1.007
+  },
+  "global30": {
+    "wm_contrastive": 1.038,
+    "wm_recon": 1.049,
+    "impoola": 1.249,
+    "cnn_mlp_vector": 1.36,
+    "aug_noise": 1.038,
+    "cnn_spatial": 1.351,
+    "cnn_cbam": 1.235,
+    "aug_crop": 1.307,
+    "impala": 1.122,
+    "aug_color": 1.018,
+    "cnn_classic": 1.16,
+    "wm_vae": 0.921,
+    "wm_ae": 1.127,
+    "resnet18": 1.327,
+    "lstm_attention": 1.313,
+    "vit": 1.024
+  }
+}
