@@ -57,6 +57,8 @@ A literatura padrão do `Procgen` (paper original, `IDAAC`/`PPG`) reporta `5M–
 | 9 | `re_eval_scorecard.py` | re-eval `new_archs+maze_heist` | — | — | `115 zips` × `30 eps` stoch+det + gap | `~70 min` (sem treino) | `results/re_eval_results.json` |
 | 10 | `compare_suite_retrain.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | retreino da suite (`11 configs`, protocolo novo) | `~28h` `30/08→31/08` `16.5M` | `logs_suite_retrain/suite_retrain_zips` + `results/retrain_results.json` |
 | 11 | `re_eval_100.py` | re-eval definitivo `275 zips` | — | — | `100 eps` stoch+det + gap (sem retreino) | `~5h` `31/08` | `results/eval100_results.json` |
+| 12 | `compare_hrl.py` *(independente)* | `jumper+plunder` | `100k frames` | `5` | `flat` vs `skip4` vs `hrl` (seção 11) | `~6-12h` `31/08` | `logs_hrl/hrl_zips` + `results/hrl_results.json` |
+| 13 | `compare_hrl_learned.py` *(independente)* | `jumper+plunder` | `100k frames` | `5` | braço `hrl_learned` (skills latentes, seção 11) | `~4-8h`, sequencial ao #12 | idem (`*_hrl_learned_*`, `.pt`) |
 
 ---
 
@@ -302,6 +304,10 @@ py -3.10 scorecard_analysis.py  # IC 95% + Cohen's d + AUC -> results/scorecard.
 py -3.10 retrain_analysis.py  # análise do retreino + ranking global novo -> results/retrain_analysis.json
 py -3.10 -u re_eval_100.py --device cuda  # protocolo definitivo: 100 eps em todos os 275 zips
 py -3.10 eval100_analysis.py  # comparação 30 vs 100 -> results/eval100_analysis.json
+py -3.10 probe_actions.py  # sondagem do espaço de ações (base das skills do HRL)
+py -3.10 -u compare_hrl.py --device cuda  # benchmark independente HRL vs Flat (jumper/plunder)
+py -3.10 -u compare_hrl_learned.py --device cuda  # braço hrl_learned (RODAR APÓS compare_hrl.py: ambos escrevem em results/hrl_results.json)
+py -3.10 hrl_analysis.py  # análise dos 4 braços -> results/hrl_analysis.json
 ```
 
 **Estimativas `cuda`:** `coinrun 50k` `5×50k` `~35 min`, `bossfight 100k` `5×100k` `~67 min`, `suite 100k` `3 jogos ×11×5×100k` `16.5M steps` `~15h` (`20:41→04:47`), `bossfight hard` `~2.5h`, `new archs 100k` `3 jogos ×5×5×100k` `7.5M steps` `~12h` (`13:45→01:39`), `maze+heist 100k` `2 jogos ×4×5×100k` `4M steps` `~6.5h` (`01:48→08:23`), `combined` imediato, `re-eval 115 zips` `~70 min`, `suite retrain 165 modelos` `~28h` (`bossfight ~10 min/modelo`, `dodgeball ~3 min/modelo`), `re-eval 100 eps 275 zips` `~5h`.
@@ -435,3 +441,35 @@ Gerados sob demanda via `visualize_side_by_side.py` (comandos na seção 4.8): `
 ## 10. Referências
 
 - `Procgen` (`Cobbe et al.`), `DreamerV3` (`SheepRL`), `CURL`/`SPR` (`mario-ds:121`), `CBAM` (`Woo et al.`), `PPO` (`Schulman`), `Stable-Baselines3`, `Imitation-player` `compare_models.py` `Nature 3.48` vs `ResNet 2.90`.
+
+---
+
+## 11. Benchmark Independente — HRL vs Flat RL (`jumper`/`plunder`)
+
+> ⚠️ **Separado do estudo principal:** não entra no scorecard das seções 3.x/6.1; logs/resultados próprios (`logs_hrl/`, `results/hrl_results.json`).
+
+**Pergunta:** hierarquia ajuda em `100k` frames? Quatro braços com **mesmo budget de `100k` frames primitivos**, `PPO` idêntico (`lr 3e-4`, `NatureCNN`, mesmos hiperparâmetros do estudo):
+
+| Braço | Descrição | Decisões treinadas |
+|---|---|---:|
+| `flat` | PPO sobre as `15` ações primitivas | `100k` |
+| `skip4` | action-repeat `4` (controle: abstração temporal **sem** hierarquia) | `25k` |
+| `hrl` | PPO meta-controlador sobre `6` skills **fixas** × `4` frames (framework de opções, `compare_hrl.py:34`) | `25k` |
+| `hrl_learned` | hierarquia 2 níveis treinada em conjunto (`compare_hrl_learned.py`): meta escolhe `6` skills **latentes aprendidas** a cada `4` frames; low-level `π(a\|obs,z)` executa ações primitivas; especialização emergente (sem incentivo de diversidade) | `25k` meta + `100k` low |
+
+**Skills do braço `hrl`** (sondagem empírica `probe_actions.py` + mapeamento oficial de ações do `procgen/env.py`; `UP`=pulo em `jumper`, `D`=tiro em `plunder`): `wait`, `left`, `right`, `jump|shoot`, `jump_left|shoot_left`, `jump_right|shoot_right`.
+
+**Notas de comparabilidade:** `hrl_learned` recebe atualização por frame no low-level (sinal de gradiente comparável ao `flat`) e usa truncamento com bootstrap em `HORIZON=256` frames (episódios de `jumper` passam de `500`; sem o teto o meta quase não decidiria) — os demais braços usam episódios nativos. Modelo salvo como `.pt` (meta+low) em `logs_hrl/hrl_zips/`, não `.zip` SB3.
+
+**Protocolo:** `2 jogos × 4 braços × 5 seeds` = `40 runs` (`30` do `compare_hrl.py` + `10` do `compare_hrl_learned.py`, sequencial); treino `num_levels=200` `easy`; eval definitivo `100 eps` stoch + `100 det` (unseen `seed+1000`) + `15 eps` train. Dados em `results/hrl_results.json`, análise em `results/hrl_analysis.json` (`hrl_analysis.py`).
+
+### 11.1. Resultados (concluído: `40/40`, `0 erros`)
+
+| Braço | `jumper` stoch | `jumper` det | `plunder` stoch | `plunder` det |
+|---|---:|---:|---:|---:|
+| `flat` | 0.90±0.49 | 0.38 | 3.53±0.45 | 0.61 |
+| `skip4` | **3.76±0.48** | 0.38 | 3.36±0.28 | 1.32 |
+| `hrl` (fixo) | 3.72±0.86 | 0.66 | 3.24±0.14 | 0.85 |
+| `hrl_learned` | 2.96±0.45 | 0.44 | **4.16±0.33** | **2.70** |
+
+> **4 achados:** (1) **`jumper`: o ganho é de abstração temporal, não de hierarquia** — `skip4`≈`hrl` (`3.7`) dão `4×` o `flat` (`0.90`); segurar direção/pulo por `4` frames é o que destrava o jogo, e a biblioteca de skills não adicionou nada além do action-repeat. (2) **`hrl_learned` fica entre o `flat` e os braços com abstração em `jumper`** (`2.96`) — co-treinar meta+low precisa de mais budget para alcançar skills pré-projetadas. (3) **`plunder`: `hrl_learned` é o único braço que ganha** (`4.16` vs `3.53` do `flat`, menor std `0.33`) — a macro fixa de segurar o tiro `4` frames não serve ao timing de tiro, mas a skill aprendida se adapta; os braços fixos empatam com o `flat`. (4) **modo determinístico:** colapsa todos os braços em `jumper` (`0.38–0.66`, política estocástica é essencial), mas em `plunder` o `hrl_learned` destoa (`det 2.70` vs `≤1.32`) — a hierarquia aprendida produz política mais explorável deterministicamente. Gen gap `plunder hrl_learned` `+0.97` (único relevante).
