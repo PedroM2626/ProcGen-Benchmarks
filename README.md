@@ -2,7 +2,15 @@
 
 **Python 3.10.11 + Procgen 0.10.7 + Stable-Baselines3 2.9.0 + PyTorch 2.5.1+cu121 (RTX 4070) — `C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe`**
 
-> **Resumo.** Avaliação sistemática de **16 arquiteturas** em **6 famílias** (`CNN` vs `Attention` vs `World Models` vs `Augment` vs `New Archs` vs `Exploração`) com **5 seeds** (`42-46`), **5 jogos** (`bossfight`, `starpilot`, `dodgeball`, `maze`, `heist` + `coinrun` controle) e **duas dificuldades** (`easy 200` / `hard 200` / `eval 0`) em `Procgen` (`~300 FPS` em `cuda`, `50k` em `~3 min`). Todos os experimentos usam `frame_stack=1` (`3×64×64` `CHW` `uint8`), `PPO` (`lr 3e-4`, `n_steps 256`, `batch 64`, `n_epochs 3`, `γ 0.99`, `λ 0.95`, `clip 0.2`), `eval 10 episódios` `deterministic=False` e `tensorboard` para a jornada.
+> **Resumo.** Avaliação sistemática de **16 arquiteturas** em **6 famílias** (`CNN` vs `Attention` vs `World Models` vs `Augment` vs `New Archs` vs `Exploração`) com **5 seeds** (`42-46`), **5 jogos** (`bossfight`, `starpilot`, `dodgeball`, `maze`, `heist` + `coinrun` controle) e **duas dificuldades** (`easy 200` / `hard 200` / `eval 0`) em `Procgen` (`~300 FPS` em `cuda`, `50k` em `~3 min`). Todos os experimentos usam `frame_stack=1` (`3×64×64` `CHW` `uint8`), `PPO` (`lr 3e-4`, `n_steps 256`, `batch 64`, `n_epochs 3`, `γ 0.99`, `λ 0.95`, `clip 0.2`), e `tensorboard` para a jornada. O eval começou com `10 episódios` e foi endurecido ao longo do estudo até o protocolo definitivo: **`100 eps` stoch + det em unseen levels (`seed+1000`)** — seções 3.10→3.12.
+
+## 0. As 5 Conclusões do Estudo
+
+1. **O protocolo de avaliação determina as conclusões — e `10` episódios não bastam.** Cada upgrade de protocolo (`10→30→100 eps`, unseen com `seed+1000`, dupla avaliação stoch+det) mudou rankings: o líder global caiu (`spatial 1.54 → 1.35`), o `ICM` perdeu a liderança de `maze`/`heist` que tinha a `30 eps` (ruído), e `vit` despencou em `dodgeball`. Lição permanente: em `Procgen`, ranking medido com `<100` episódios não é confiável (seções 3.10–3.12).
+2. **Não existe vencedor absoluto — existe um líder consistente: `mlp_vector`.** No protocolo definitivo o top-5 global é estatisticamente indistinguível (`mlp_vector 1.43` ≈ `resnet18 1.34` ≈ `spatial 1.28` ≈ `lstm_attention 1.26` ≈ `aug_crop 1.25`), mas só o `mlp_vector` (MLP sobre `16×16` grayscale, `256D`) esteve no topo em **todos** os protocolos (`1.25@10 → 1.36@30 → 1.43@100`) e vence `starpilot`. Vencedores por jogo: `aug_crop` (`bossfight`), `mlp_vector` (`starpilot`), `resnet18` (`dodgeball`) (seção 3.12).
+3. **World Models e exploração: conclusões contextuais, não universais.** WMs são fracos só no `bossfight` (`<0.5`); em `starpilot`/`dodgeball` empatam com CNNs — o "WM é fraco" original era efeito dominado por um jogo. Curiosidade (`ICM`/`RND`/`NGU`) empata com `PPO` em `maze`/`heist` a `100 eps` — a vantagem inicial era ruído de `30 eps` (seções 3.11–3.12).
+4. **Neste budget, arquitetura importa menos que avaliação rigorosa — e mais budget não resolve.** O budget scaling (`100k→250k→500k`) mostra curvas **estagnadas** para as duas configs de topo nos seus jogos: `5×` budget não criou nem destruiu vantagem, e o gen gap seguiu `≈0` (sem memorização até `500k`). Com `5 seeds`, as diferenças entre configs são da ordem do ruído: o estudo reporta **tendências com IC**, não campeões (seções 3.8, 3.13).
+5. **Em HRL, a alavanca é a abstração temporal — e skills aprendidas só ganham onde timing importa.** Em `jumper`, action-repeat (`skip4`) dá `4×` o flat e a hierarquia com skills fixas não adiciona nada; em `plunder`, só a hierarquia com **skills aprendidas** vence (`4.16` vs `3.53`, `+18%`) e produz política explorável deterministicamente (`det 2.70` vs `≤1.32`). "Hierarquia ajuda?" depende do jogo (seção 11.1).
 
 ---
 
@@ -241,6 +249,19 @@ Re-avaliação dos mesmos zips com `100 eps unseen` stoch + `100 eps` det + `15 
 
 > **4 achados do upgrade 30→100:** (1) **`mlp_vector` consolida o 1º lugar global** (`1.25`@10eps → `1.36`@30 → `1.43`@100 — o único no top em todos os protocolos). (2) **A vantagem do `ICM` dissolve**: `2.80→2.76` em `maze` vs `ppo/rnd/ngu 2.47→2.80` — o "`ICM` vence" da seção 3.10 era ruído de `30 eps`; a conclusão volta a ser empate com `PPO`. (3) **Top-1 de `starpilot`/`dodgeball` inverte de novo** (`lstm→mlp`, `mlp→resnet18`) enquanto `bossfight` fica estável — o topo sólido existe, o meio do ranking segue instável. (4) **|delta| médio `0.108`** entre @30 e @100: ganho incremental, e as trocas de posição restantes confirmam a tese da seção 3.8 — com `5 seeds` e diferenças dessa magnitude, nenhuma ordenação se *fecha*; o estudo reporta tendências com IC.
 
+### 3.13. Budget Scaling — `compare_budget_scaling.py` (concluído: `24/24`, `0 erros`)
+
+Roadmap item #6: a vantagem dos vencedores persiste com mais budget? Escopo: `resnet18`+`mlp_vector` × `starpilot`+`dodgeball` × `3 seeds` (42-44) × `250k`/`500k`; o ponto `100k` é o já existente (eval definitivo, mesmos seeds). Dados em `results/budget_results.json`, análise em `results/budget_analysis.json` (`budget_analysis.py`):
+
+| Curva (stoch unseen) | 100k | 250k | 500k | Veredito |
+|---|---:|---:|---:|---|
+| `starpilot_resnet18` | 2.30±0.58 | 2.73±0.27 | 2.52±0.49 | **estagnado** |
+| `starpilot_mlp_vector` | 2.67±0.23 | 3.23±0.55 | 2.64±0.41 | **estagnado** |
+| `dodgeball_resnet18` | 1.07±0.38 | 1.01±0.15 | 1.00±0.07 | **estagnado** |
+| `dodgeball_mlp_vector` | 1.17±0.35 | 0.91±0.15 | 0.91±0.15 | **estagnado** |
+
+> **3 achados:** (1) **Nenhuma curva sobe com budget** — `250k` é o pico (leve, dentro do ruído) e `500k` volta/empata; nenhuma vantagem a `100k` foi criada ou destruída por `5×` budget. Resposta ao item #6: **mais budget não era necessário** para separar estas configs; `100k` era suficiente. (2) **Vantagens por jogo persistem**: `mlp_vector` lidera `starpilot` a `250k` (`3.23` vs `2.73`) e `resnet18` lidera `dodgeball` nos dois budgets (`1.01/1.00` vs `0.91`) — o padrão da seção 3.12 se mantém. (3) **Gen gap segue ≈ `0`/negativo mesmo a `500k`** — memorização não aparece com mais budget, reforçando a seção 3.10.
+
 ---
 
 ## 4. Gráficos e Vídeos
@@ -308,6 +329,8 @@ py -3.10 probe_actions.py  # sondagem do espaço de ações (base das skills do 
 py -3.10 -u compare_hrl.py --device cuda  # benchmark independente HRL vs Flat (jumper/plunder)
 py -3.10 -u compare_hrl_learned.py --device cuda  # braço hrl_learned (RODAR APÓS compare_hrl.py: ambos escrevem em results/hrl_results.json)
 py -3.10 hrl_analysis.py  # análise dos 4 braços -> results/hrl_analysis.json
+py -3.10 -u compare_budget_scaling.py --device cuda  # budget scaling 250k/500k (resume-safe)
+py -3.10 budget_analysis.py  # curvas 100k->250k->500k -> results/budget_analysis.json
 ```
 
 **Estimativas `cuda`:** `coinrun 50k` `5×50k` `~35 min`, `bossfight 100k` `5×100k` `~67 min`, `suite 100k` `3 jogos ×11×5×100k` `16.5M steps` `~15h` (`20:41→04:47`), `bossfight hard` `~2.5h`, `new archs 100k` `3 jogos ×5×5×100k` `7.5M steps` `~12h` (`13:45→01:39`), `maze+heist 100k` `2 jogos ×4×5×100k` `4M steps` `~6.5h` (`01:48→08:23`), `combined` imediato, `re-eval 115 zips` `~70 min`, `suite retrain 165 modelos` `~28h` (`bossfight ~10 min/modelo`, `dodgeball ~3 min/modelo`), `re-eval 100 eps 275 zips` `~5h`.
@@ -333,7 +356,7 @@ O próximo salto não é adicionar arquiteturas, e sim instrumentar melhor as qu
 | 3 | **Intervalos de confiança + effect size** | ✅ concluído (`scorecard_analysis.py` → seção 3.8) | com `n=5 seeds`, diferenças pequenas não suportam conclusão de superioridade; `IC 95%` (`t` de Student) e `Cohen's d` por par em `results/scorecard.json` |
 | 4 | **Scorecard: robustez + sample efficiency (AUC)** | ✅ AUC concluído (seção 3.9); robustez = std já existente | `AUC(reward, env_steps)` das curvas `tensorboard` de `new_archs`/`maze_heist`; pergunta muda de "quem ganhou" para "quem aprende mais rápido"; **não requereu retreino** |
 | 5 | **Scorecard: generalization gap** | ✅ concluído (item 1, sem retreino) | `gap = train(200 níveis, seed treino) − unseen`; ≈ `0`/negativo na maioria → sem memorização (seção 3.10) |
-| 6 | **Budget scaling `100k→250k→500k`** | ⏳ pendente (requer retreino) | só para vencedores; em `RTX 4070 Laptop` escopar para `2 configs × 2 jogos × 3 seeds × 500k` (~`2-3 dias`), não o grid completo; responde "essa vantagem persiste com mais budget?" |
+| 6 | **Budget scaling `100k→250k→500k`** | ✅ concluído (`compare_budget_scaling.py` → seção 3.13) | `24 jobs` (`250k+500k` × `resnet18+mlp_vector` × `starpilot+dodgeball` × `3 seeds`); veredito: **curvas estagnam — mais budget não era necessário** |
 
 **Scorecard final** (4 eixos preenchidos — `Performance` = re-eval `30 eps stoch`, `AUC` seção 3.9, `Generalização` = gen gap seção 3.10, `Robustez` = ±std entre seeds; ordenado por Performance):
 
