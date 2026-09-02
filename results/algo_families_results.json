@@ -1,0 +1,482 @@
+{
+  "starpilot_ppo_seed42": {
+    "stoch_unseen": 2.99,
+    "det_unseen": 0.13,
+    "stoch_train": 2.267,
+    "gen_gap": -0.723,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_ppo_seed43": {
+    "stoch_unseen": 1.67,
+    "det_unseen": 0.0,
+    "stoch_train": 2.533,
+    "gen_gap": 0.863,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_ppo_seed44": {
+    "stoch_unseen": 2.52,
+    "det_unseen": 1.08,
+    "stoch_train": 2.867,
+    "gen_gap": 0.347,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_ppo_seed45": {
+    "stoch_unseen": 1.9,
+    "det_unseen": 1.66,
+    "stoch_train": 2.0,
+    "gen_gap": 0.1,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_ppo_seed46": {
+    "stoch_unseen": 2.36,
+    "det_unseen": 0.33,
+    "stoch_train": 1.933,
+    "gen_gap": -0.427,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_a2c_seed42": {
+    "stoch_unseen": 2.29,
+    "det_unseen": 0.0,
+    "stoch_train": 2.0,
+    "gen_gap": -0.29,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_a2c_seed43": {
+    "stoch_unseen": 2.24,
+    "det_unseen": 1.5,
+    "stoch_train": 2.0,
+    "gen_gap": -0.24,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_a2c_seed44": {
+    "stoch_unseen": 2.7,
+    "det_unseen": 0.0,
+    "stoch_train": 2.667,
+    "gen_gap": -0.033,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_a2c_seed45": {
+    "stoch_unseen": 2.71,
+    "det_unseen": 1.62,
+    "stoch_train": 1.933,
+    "gen_gap": -0.777,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_a2c_seed46": {
+    "stoch_unseen": 1.97,
+    "det_unseen": 1.31,
+    "stoch_train": 2.067,
+    "gen_gap": 0.097,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_dqn_seed42": {
+    "stoch_unseen": 0.09,
+    "det_unseen": 0.17,
+    "stoch_train": 0.133,
+    "gen_gap": 0.043,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_dqn_seed43": {
+    "stoch_unseen": 0.69,
+    "det_unseen": 0.5,
+    "stoch_train": 0.267,
+    "gen_gap": -0.423,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_dqn_seed44": {
+    "stoch_unseen": 0.8,
+    "det_unseen": 0.62,
+    "stoch_train": 0.4,
+    "gen_gap": -0.4,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_dqn_seed45": {
+    "stoch_unseen": 0.47,
+    "det_unseen": 0.55,
+    "stoch_train": 0.6,
+    "gen_gap": 0.13,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_dqn_seed46": {
+    "stoch_unseen": 1.21,
+    "det_unseen": 1.31,
+    "stoch_train": 1.733,
+    "gen_gap": 0.523,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_qrdqn_seed42": {
+    "stoch_unseen": 0.78,
+    "det_unseen": 0.59,
+    "stoch_train": 0.533,
+    "gen_gap": -0.247,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_qrdqn_seed43": {
+    "stoch_unseen": 0.95,
+    "det_unseen": 0.9,
+    "stoch_train": 1.667,
+    "gen_gap": 0.717,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_qrdqn_seed44": {
+    "stoch_unseen": 0.79,
+    "det_unseen": 0.7,
+    "stoch_train": 0.6,
+    "gen_gap": -0.19,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_qrdqn_seed45": {
+    "stoch_unseen": 1.3,
+    "det_unseen": 1.52,
+    "stoch_train": 1.733,
+    "gen_gap": 0.433,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "starpilot_qrdqn_seed46": {
+    "stoch_unseen": 1.39,
+    "det_unseen": 1.28,
+    "stoch_train": 2.333,
+    "gen_gap": 0.943,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_ppo_seed42": {
+    "stoch_unseen": 0.72,
+    "det_unseen": 0.8,
+    "stoch_train": 1.2,
+    "gen_gap": 0.48,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_ppo_seed43": {
+    "stoch_unseen": 0.74,
+    "det_unseen": 0.98,
+    "stoch_train": 0.933,
+    "gen_gap": 0.193,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_ppo_seed44": {
+    "stoch_unseen": 1.22,
+    "det_unseen": 0.0,
+    "stoch_train": 0.8,
+    "gen_gap": -0.42,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_ppo_seed45": {
+    "stoch_unseen": 0.38,
+    "det_unseen": 0.0,
+    "stoch_train": 0.4,
+    "gen_gap": 0.02,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_ppo_seed46": {
+    "stoch_unseen": 0.18,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": -0.18,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_a2c_seed42": {
+    "stoch_unseen": 0.96,
+    "det_unseen": 0.96,
+    "stoch_train": 1.333,
+    "gen_gap": 0.373,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_a2c_seed43": {
+    "stoch_unseen": 0.94,
+    "det_unseen": 1.12,
+    "stoch_train": 0.4,
+    "gen_gap": -0.54,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_a2c_seed44": {
+    "stoch_unseen": 1.02,
+    "det_unseen": 0.96,
+    "stoch_train": 1.067,
+    "gen_gap": 0.047,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_a2c_seed45": {
+    "stoch_unseen": 0.8,
+    "det_unseen": 0.9,
+    "stoch_train": 0.933,
+    "gen_gap": 0.133,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_a2c_seed46": {
+    "stoch_unseen": 0.74,
+    "det_unseen": 1.32,
+    "stoch_train": 1.067,
+    "gen_gap": 0.327,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_dqn_seed42": {
+    "stoch_unseen": 0.02,
+    "det_unseen": 0.06,
+    "stoch_train": 0.0,
+    "gen_gap": -0.02,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_dqn_seed43": {
+    "stoch_unseen": 0.24,
+    "det_unseen": 0.12,
+    "stoch_train": 0.0,
+    "gen_gap": -0.24,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_dqn_seed44": {
+    "stoch_unseen": 0.24,
+    "det_unseen": 0.3,
+    "stoch_train": 0.4,
+    "gen_gap": 0.16,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_dqn_seed45": {
+    "stoch_unseen": 0.26,
+    "det_unseen": 0.04,
+    "stoch_train": 0.0,
+    "gen_gap": -0.26,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_dqn_seed46": {
+    "stoch_unseen": 0.14,
+    "det_unseen": 0.16,
+    "stoch_train": 0.267,
+    "gen_gap": 0.127,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_qrdqn_seed42": {
+    "stoch_unseen": 1.18,
+    "det_unseen": 0.6,
+    "stoch_train": 1.867,
+    "gen_gap": 0.687,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_qrdqn_seed43": {
+    "stoch_unseen": 0.12,
+    "det_unseen": 0.08,
+    "stoch_train": 0.267,
+    "gen_gap": 0.147,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_qrdqn_seed44": {
+    "stoch_unseen": 0.48,
+    "det_unseen": 0.42,
+    "stoch_train": 0.133,
+    "gen_gap": -0.347,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_qrdqn_seed45": {
+    "stoch_unseen": 0.08,
+    "det_unseen": 0.1,
+    "stoch_train": 0.4,
+    "gen_gap": 0.32,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "dodgeball_qrdqn_seed46": {
+    "stoch_unseen": 1.18,
+    "det_unseen": 0.5,
+    "stoch_train": 0.8,
+    "gen_gap": -0.38,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_ppo_seed42": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_ppo_seed43": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_ppo_seed44": {
+    "stoch_unseen": 0.01,
+    "det_unseen": 0.05,
+    "stoch_train": 0.0,
+    "gen_gap": -0.01,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_ppo_seed45": {
+    "stoch_unseen": 0.15,
+    "det_unseen": 0.0,
+    "stoch_train": 0.067,
+    "gen_gap": -0.083,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_ppo_seed46": {
+    "stoch_unseen": 0.75,
+    "det_unseen": 0.68,
+    "stoch_train": 0.133,
+    "gen_gap": -0.617,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_a2c_seed42": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.56,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_a2c_seed43": {
+    "stoch_unseen": 0.02,
+    "det_unseen": 0.52,
+    "stoch_train": 0.067,
+    "gen_gap": 0.047,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_a2c_seed44": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_a2c_seed45": {
+    "stoch_unseen": 0.13,
+    "det_unseen": 0.74,
+    "stoch_train": 0.0,
+    "gen_gap": -0.13,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_a2c_seed46": {
+    "stoch_unseen": 0.11,
+    "det_unseen": 1.33,
+    "stoch_train": 0.0,
+    "gen_gap": -0.11,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_dqn_seed42": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.13,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_dqn_seed43": {
+    "stoch_unseen": 0.13,
+    "det_unseen": 0.13,
+    "stoch_train": 0.067,
+    "gen_gap": -0.063,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_dqn_seed44": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_dqn_seed45": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_dqn_seed46": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.03,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_qrdqn_seed42": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_qrdqn_seed43": {
+    "stoch_unseen": 0.06,
+    "det_unseen": 0.27,
+    "stoch_train": 0.067,
+    "gen_gap": 0.007,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_qrdqn_seed44": {
+    "stoch_unseen": 1.29,
+    "det_unseen": 0.48,
+    "stoch_train": 1.133,
+    "gen_gap": -0.157,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_qrdqn_seed45": {
+    "stoch_unseen": 0.0,
+    "det_unseen": 0.0,
+    "stoch_train": 0.0,
+    "gen_gap": 0.0,
+    "n_unseen": 100,
+    "n_train": 15
+  },
+  "bossfight_qrdqn_seed46": {
+    "stoch_unseen": 0.06,
+    "det_unseen": 0.25,
+    "stoch_train": 0.133,
+    "gen_gap": 0.073,
+    "n_unseen": 100,
+    "n_train": 15
+  }
+}
