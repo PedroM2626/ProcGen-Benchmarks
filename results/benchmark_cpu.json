@@ -1,0 +1,9 @@
+{
+  "device": "cpu:0",
+  "backend": "cpu",
+  "steps": 98304,
+  "compile_time_sec": 74.0,
+  "train_time_sec": 453.22,
+  "fps": 216.9,
+  "num_envs": 256
+}

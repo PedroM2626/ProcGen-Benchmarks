@@ -1,0 +1,37 @@
+{
+  "IPPO": {
+    "paradigma": "Descentralizado (Independente)",
+    "throughput_fps": 2123269.0,
+    "coop_reward": -2.41,
+    "cobertura_alvos": "68.5%",
+    "estabilidade": "M\u00e9dia (sofre com ambiente n\u00e3o-estacion\u00e1rio)"
+  },
+  "MAPPO": {
+    "paradigma": "CTDE (Cr\u00edtico Centralizado MLP)",
+    "throughput_fps": 2055505.0,
+    "coop_reward": -1.18,
+    "cobertura_alvos": "92.4%",
+    "estabilidade": "Alta (CTDE elimina n\u00e3o-estacionariedade)"
+  },
+  "MA-POCA": {
+    "paradigma": "CTDE + Auto-Aten\u00e7\u00e3o + Baseline Contrafactual",
+    "throughput_fps": 1942566.0,
+    "coop_reward": -0.98,
+    "cobertura_alvos": "96.8%",
+    "estabilidade": "Excelente (Resolve Credit Assignment e Lazy Agent)"
+  },
+  "VDN": {
+    "paradigma": "Fatora\u00e7\u00e3o Aditiva Q_tot = sum(Qi)",
+    "throughput_fps": 2168445.0,
+    "coop_reward": -1.85,
+    "cobertura_alvos": "79.2%",
+    "estabilidade": "M\u00e9dia-Alta (Restrita a aditividade linear)"
+  },
+  "QMIX": {
+    "paradigma": "Fatora\u00e7\u00e3o Monot\u00f4nica com Hiper-redes",
+    "throughput_fps": 1987742.0,
+    "coop_reward": -1.09,
+    "cobertura_alvos": "95.1%",
+    "estabilidade": "Muito Alta (Campe\u00e3o Value-based)"
+  }
+}

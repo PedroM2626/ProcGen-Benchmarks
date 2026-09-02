@@ -1,0 +1,29 @@
+{
+  "Pixels_CNN": {
+    "modalidade": "Imagem / Grid 2D Convolucional",
+    "vi\u00e9s_indutivo": "Localidade espacial 2D e invari\u00e2ncia \u00e0 transla\u00e7\u00e3o",
+    "throughput_fps": 4768.0,
+    "unseen_score": 0.19,
+    "det_score": 0.23,
+    "invariancia_permutacao": "N\u00e3o (depende da coordenada exata do pixel)",
+    "conclusao": "Excelente para percep\u00e7\u00e3o de texturas, mas gasta computa\u00e7\u00e3o com pixels vazios (grama/c\u00e9u)"
+  },
+  "Vetor_MLP": {
+    "modalidade": "Vetor Tabular / Simb\u00f3lico (1345D)",
+    "vi\u00e9s_indutivo": "Nenhum (conectividade densa cega)",
+    "throughput_fps": 2894.0,
+    "unseen_score": 0.205,
+    "det_score": 0.21,
+    "invariancia_permutacao": "N\u00e3o (ordem r\u00edgida de features nas colunas)",
+    "conclusao": "Muito r\u00e1pido e sem ru\u00eddo de renderiza\u00e7\u00e3o (igual ao mlp_vector do ProcGen), mas perde topologia 2D"
+  },
+  "Grafo_GNN": {
+    "modalidade": "Grafo Relacional (N\u00f3s de Entidades + Arestas Espaciais + GAT)",
+    "vi\u00e9s_indutivo": "Invari\u00e2ncia \u00e0 permuta\u00e7\u00e3o de entidades + racioc\u00ednio relacional",
+    "throughput_fps": 903.0,
+    "unseen_score": 0.252,
+    "det_score": 0.26,
+    "invariancia_permutacao": "SIM (Totalmente invariante \u00e0 ordem das entidades)",
+    "conclusao": "VENCEDOR DA TR\u00cdADE (+32% vs Pixels, +23% vs Vetor): foca apenas em entidades ativas e rela\u00e7\u00f5es de dist\u00e2ncia"
+  }
+}

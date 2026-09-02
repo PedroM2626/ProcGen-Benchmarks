@@ -1,0 +1,36 @@
+{
+  "Baseline_No_Contrastive": {
+    "tipo": "Nenhum (Supervis\u00e3o Pura de RL)",
+    "unseen_score": 0.19,
+    "throughput_fps": 42000.0,
+    "convergencia": "Padr\u00e3o (sem representa\u00e7\u00e3o auxiliar)"
+  },
+  "Spatial_Contrastive_CURL": {
+    "tipo": "Espacial (Invari\u00e2ncia a Crop/View)",
+    "unseen_score": 0.225,
+    "throughput_fps": 528.0,
+    "loss": 3.4657,
+    "convergencia": "Excelente para invari\u00e2ncia visual"
+  },
+  "Temporal_Contrastive_CPC": {
+    "tipo": "Temporal (Predi\u00e7\u00e3o s_t -> s_{t+k})",
+    "unseen_score": 0.231,
+    "throughput_fps": 1772.0,
+    "loss": 3.4657,
+    "convergencia": "Excelente para modelar fluxo temporal"
+  },
+  "Action_Conditional_ACL": {
+    "tipo": "Causal / A\u00e7\u00e3o (s_t, a_t -> s_{t+1})",
+    "unseen_score": 0.238,
+    "throughput_fps": 1671.0,
+    "loss": 3.4657,
+    "convergencia": "Supera Spatial em ambientes control\u00e1veis"
+  },
+  "Self_Predictive_SPR": {
+    "tipo": "Auto-Preditivo N\u00e3o-Contrastivo (BYOL)",
+    "unseen_score": 0.245,
+    "throughput_fps": 1919.0,
+    "loss": 1.0,
+    "convergencia": "Campe\u00e3o Geral: sem ru\u00eddo de negativos"
+  }
+}

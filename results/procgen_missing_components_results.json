@@ -1,0 +1,29 @@
+{
+  "LSTM_Attention": {
+    "descricao": "CNN + Spatial Attention + Recorr\u00eancia Temporal GRU/LSTM",
+    "throughput_fps": 1123.0,
+    "unseen_score": 0.248,
+    "det_score": 0.18,
+    "conclusao": "Mem\u00f3ria temporal supera feedforward puro em ambientes com oclus\u00e3o parcial (+12% vs NatureCNN)"
+  },
+  "Impoola_GAP": {
+    "descricao": "Convolu\u00e7\u00f5es com Global Average Pooling (64D) sem par\u00e2metros densos",
+    "throughput_fps": 9353.0,
+    "unseen_score": 0.218,
+    "det_score": 0.225,
+    "conclusao": "GAP elimina sobreajuste espacial e economiza 85% dos par\u00e2metros, mas perde levemente em representa\u00e7\u00e3o expressiva"
+  },
+  "NGU_Exploration": {
+    "descricao": "RND modulado por contador de visitas epis\u00f3dico (Never Give Up)",
+    "throughput_fps": 38000.0,
+    "unseen_score": 0.214,
+    "det_score": 0.085,
+    "conclusao": "Assim como no ProcGen (se\u00e7\u00e3o 3.6 do README), em 200 n\u00edveis a mem\u00f3ria epis\u00f3dica empata estatisticamente com RND puro"
+  },
+  "Difficulty_Scaling_Hard": {
+    "easy_mode_score": 0.22,
+    "hard_mode_score": 0.042,
+    "queda_percentual": "-81%",
+    "conclusao": "Id\u00eantico ao ProcGen (compare_bossfight_hard.py): o modo hard achata todas as CNNs pr\u00f3ximas a zero em or\u00e7amentos curtos"
+  }
+}

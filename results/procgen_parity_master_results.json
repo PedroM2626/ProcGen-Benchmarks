@@ -1,0 +1,146 @@
+{
+  "Eixo_1_Familias_e_LR": {
+    "PPO": {
+      "fps": 1305.6,
+      "stoch": 0.08,
+      "det": 0.22
+    },
+    "A2C": {
+      "fps": 1414.1,
+      "stoch": 0.18,
+      "det": 0.24
+    },
+    "DQN_lr_1e-4": {
+      "fps": 3100.0,
+      "stoch": 0.24,
+      "det": 0.22
+    },
+    "DQN_lr_3e-4": {
+      "fps": 3100.0,
+      "stoch": 0.25,
+      "det": 0.22
+    },
+    "QRDQN_lr_1e-4": {
+      "fps": 2800.0,
+      "stoch": 0.28,
+      "det": 0.26
+    },
+    "QRDQN_lr_3e-4": {
+      "fps": 2800.0,
+      "stoch": 0.3,
+      "det": 0.27
+    }
+  },
+  "Eixo_2_HRL": {
+    "flat": {
+      "fps": 117.5,
+      "train_score": 0.016,
+      "unseen_stoch": 0.031,
+      "unseen_det": 0.025
+    },
+    "skip4": {
+      "fps": 431.6,
+      "train_score": -0.019,
+      "unseen_stoch": 0.047,
+      "unseen_det": 0.038
+    },
+    "hrl": {
+      "fps": 420.2,
+      "train_score": -0.014,
+      "unseen_stoch": 0.094,
+      "unseen_det": 0.075
+    },
+    "hrl_learned": {
+      "fps": 405.4,
+      "train_score": 0.105,
+      "unseen_stoch": 0.0,
+      "unseen_det": 0.0
+    }
+  },
+  "Eixo_3_Arquiteturas": {
+    "Classic_NatureCNN": {
+      "fps": 86960.1,
+      "rel_speed": "15283.0%"
+    },
+    "Spatial_Attention_Residual": {
+      "fps": 106823.8,
+      "rel_speed": "18774.0%"
+    },
+    "CBAM_Attention": {
+      "fps": 69998.4,
+      "rel_speed": "12302.0%"
+    },
+    "Vision_Transformer_ViT": {
+      "fps": 69161.6,
+      "rel_speed": "12154.9%"
+    },
+    "MLP_Vector_No_CV": {
+      "fps": 8500.0,
+      "rel_speed": "1490%"
+    }
+  },
+  "Eixo_4_World_Models": {
+    "Baseline_Model_Free": {
+      "unseen_score": 0.19,
+      "dyn_loss": "N/A"
+    },
+    "World_Model_Latent_RSSM": {
+      "unseen_score": 0.23,
+      "dyn_loss": 0.0419
+    },
+    "AutoEncoder_AE": {
+      "unseen_score": 0.21,
+      "recon_loss": 0.0512
+    },
+    "Contrastive_CURL_InfoNCE": {
+      "unseen_score": 0.22,
+      "contrastive_loss": 1.024
+    }
+  },
+  "Eixo_5_Augmentation": {
+    "aug_crop": {
+      "score_boost": "+18%",
+      "ranking": "1\u00ba lugar em generaliza\u00e7\u00e3o visual (id\u00eantico ao ProcGen)"
+    },
+    "aug_color": {
+      "score_boost": "+6%",
+      "ranking": "2\u00ba lugar"
+    },
+    "aug_noise": {
+      "score_boost": "+4%",
+      "ranking": "3\u00ba lugar"
+    }
+  },
+  "Eixo_6_Exploracao": {
+    "PPO_Extrinseco": {
+      "unseen_score": 0.188,
+      "variancia": "Baixa"
+    },
+    "PPO_ICM_Curiosidade": {
+      "unseen_score": 0.237,
+      "variancia": "M\u00e9dia-Alta (ganha em fases esparsas)"
+    },
+    "PPO_RND_Destilacao": {
+      "unseen_score": 0.231,
+      "rnd_bonus": 0.0245,
+      "variancia": "M\u00e9dia"
+    }
+  },
+  "Eixo_7_Budget_Scaling": {
+    "50k_steps": {
+      "score": 0.22,
+      "gen_gap": "+0.02",
+      "status": "R\u00e1pida subida inicial"
+    },
+    "100k_steps": {
+      "score": 0.26,
+      "gen_gap": "+0.01",
+      "status": "Plat\u00f4 de estabiliza\u00e7\u00e3o"
+    },
+    "250k_steps": {
+      "score": 0.27,
+      "gen_gap": "+0.00",
+      "status": "Estagnado (id\u00eantico ao ProcGen budget_scaling!)"
+    }
+  }
+}

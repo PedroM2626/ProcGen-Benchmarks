@@ -1,0 +1,44 @@
+{
+  "Single_Discrete_PPO": {
+    "categoria": "Single-Agent",
+    "espaco": "Discreto (5 a\u00e7\u00f5es quantizadas)",
+    "throughput_fps": 42000.0,
+    "reward": 2.45,
+    "suavidade": "Baixa (trajet\u00f3ria em zigue-zague)"
+  },
+  "Single_Continuous_PPO": {
+    "categoria": "Single-Agent",
+    "espaco": "Cont\u00ednuo (For\u00e7a 2D em [-1, 1])",
+    "throughput_fps": 674880.0,
+    "reward": 3.82,
+    "suavidade": "Alta (curvas suaves e acelera\u00e7\u00e3o cont\u00ednua)"
+  },
+  "Single_Continuous_SAC": {
+    "categoria": "Single-Agent",
+    "espaco": "Cont\u00ednuo (Tanh Squashed)",
+    "throughput_fps": 638596.0,
+    "reward": 4.25,
+    "suavidade": "Excelente (M\u00e1xima entropia e torque m\u00ednimo)"
+  },
+  "Multi_Discrete_MAPPO": {
+    "categoria": "Multi-Agent",
+    "espaco": "Discreto (5 a\u00e7\u00f5es por agente)",
+    "throughput_fps": 2055505.0,
+    "reward": -1.18,
+    "suavidade": "M\u00e9dia (movimentos discretizados)"
+  },
+  "Multi_Continuous_MAPPO": {
+    "categoria": "Multi-Agent",
+    "espaco": "Cont\u00ednuo (For\u00e7a 2D por agente)",
+    "throughput_fps": 1895000.0,
+    "reward": -0.84,
+    "suavidade": "Muito Alta (evas\u00e3o suave de colis\u00f5es)"
+  },
+  "Multi_Continuous_MAPOCA": {
+    "categoria": "Multi-Agent",
+    "espaco": "Cont\u00ednuo (Auto-Aten\u00e7\u00e3o + For\u00e7a 2D)",
+    "throughput_fps": 1812000.0,
+    "reward": -0.68,
+    "suavidade": "Excelente (Coordena\u00e7\u00e3o fluida e sem oscila\u00e7\u00e3o)"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "device": "cuda:0",
+  "backend": "gpu",
+  "steps": 98304,
+  "compile_time_sec": 18.29,
+  "train_time_sec": 17.4,
+  "fps": 5648.3,
+  "num_envs": 256
+}

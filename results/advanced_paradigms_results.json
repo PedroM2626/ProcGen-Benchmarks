@@ -1,0 +1,35 @@
+{
+  "Baseline_PPO": {
+    "fps": 2134.5,
+    "time_sec": 14.06,
+    "unseen_score": 0.188
+  },
+  "PPO_ICM": {
+    "fps": 548.4,
+    "time_sec": 54.71,
+    "unseen_score": 0.237,
+    "mean_intrinsic_reward": 2.4928
+  },
+  "PPO_Contrastive_CURL": {
+    "fps": 589.5,
+    "time_sec": 50.89,
+    "unseen_score": 0.217,
+    "contrastive_loss": 1.0241
+  },
+  "PPO_WorldModel": {
+    "fps": 601.6,
+    "time_sec": 49.87,
+    "unseen_score": 0.228,
+    "dynamics_loss": 0.0419
+  },
+  "Architectures_Visual": {
+    "NatureCNN_FPS": 569.2,
+    "ViT_Transformer_FPS": 422.8,
+    "ViT_Relative_Speed": "74.3% da CNN",
+    "Obs_Shape": [
+      63,
+      63,
+      3
+    ]
+  }
+}
