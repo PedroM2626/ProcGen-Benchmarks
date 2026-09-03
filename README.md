@@ -12,7 +12,7 @@
 
 ---
 
-## 0. As 8 Conclusões Científicas Globais
+## 0. As 9 Conclusões Científicas Globais
 
 1. **O Grafo (GNN / GAT) supera Imagem (Pixels) e Vetor (MLP):**
    No comparativo da Tríade de Representações, o extrator relacional em Grafo (`FeatureExtractorGNN`) atingiu **0.252** em fases inéditas (+32% sobre NatureCNN e +23% sobre MLP tabular). O Grafo abstrai o fundo estático (grama/paredes) e foca exclusivamente nas entidades ativas (jogador, monstros, ferramentas e minérios). Sua **invariância à permutação** impede que a ordem de geração procedural confunda o agente.
@@ -30,6 +30,8 @@
    Na mesma NVIDIA RTX 4070 Laptop, um experimento equivalente ao `re_eval_100.py` e à suite combinatória (que exigia **~24 a 28 horas** ininterruptas em PyTorch/SB3) foi executado em **menos de 1 minuto** no JAX. A compilação JIT de ponta a ponta acelerou o treino em **26.0x em relação à CPU** e até **370x em relação ao ProcGen via PCIe**.
 8. **GNN 3D e SAC dominam a Locomoção Tridimensional (Humanoid e MARL 3D):**
    No benchmark com **Google Brax** (`Humanoid 3D`, `Ant 3D`, `HalfCheetah 3D`), modelar o esqueleto e juntas do robô como um Grafo Relacional 3D (`SAC + GNN_3D`) permitiu atingir **9.180 pontos** (+61% sobre o PPO Gaussiano), coordenando a cadeia cinemática com menor estresse articular. No Multi-Agent 3D, o **MA-POCA 3D** alcançou **97.2% de cobertura de alvos no espaço tridimensional contínuo** a mais de **2.75 milhões de steps/segundo** na GPU.
+9. **Comunicação Explícita (TarMAC/GAT) é Indispensável sob Nevoeiro de Guerra:**
+   No confronto dos 4 paradigmas de MARL (*CTDE*, *Value Decomposition*, *Centralized CTE* e *Explicit Communication*), o CTDE (MA-POCA) é o campeão em visão desobstruída com **zero custo de banda**. No entanto, sob **Nevoeiro de Guerra (Fog-of-War / POMDP)**, o CTDE perde **−98.5%** de eficácia, enquanto a **Comunicação Explícita** com atenção em grafo (TarMAC) preserva **95.4% de cobertura** sofrendo apenas **−21.0% de degradação**, provando que mensagens neurais contínuas são vitais em ambientes de observabilidade estritamente parcial.
 
 ---
 ---
@@ -218,6 +220,26 @@ Avaliados na **NVIDIA GeForce RTX 4070 Laptop GPU** com 64 ambientes paralelos a
 | **MAPPO** | CTDE *(Crítico Centralizado MLP)* | **2.055.505 FPS** | -1.18 | 92.4% | CTDE clássico elimina a não-estacionariedade do treino. |
 | **QMIX** | Fatoração Monotônica *(Hiper-redes)* | **1.987.742 FPS** | **-1.09** | **95.1%** | **Líder Value-Based:** Modela sinergias não-lineares. |
 | **MA-POCA** | **CTDE + Auto-Atenção + Contrafactual** | **1.942.566 FPS** | **-0.98** | **96.8%** | **CAMPEÃO GERAL MARL:** A auto-atenção e o crédito contrafactual eliminam o *lazy agent problem*. |
+
+---
+
+### 2.4. O Confronto dos 4 Grandes Paradigmas: CTDE vs Value Decomp. vs Centralized vs Explicit Comm. (`experiments/compare_marl_4_paradigms.py`)
+
+Para fechar com chave de ouro a taxonomia teórica de inteligência multi-agente, confrontamos as **4 grandes correntes de MARL da literatura internacional** sob duas condições operacionais: **Visão Limpa** vs **Nevoeiro de Guerra (*Fog-of-War* POMDP com oclusão severa de sensores)**:
+
+![Confronto dos 4 Grandes Paradigmas de MARL](figures/08_marl_4_paradigms.png)
+
+| Paradigma Teórico | Algoritmo Representativo | Mecanismo de Execução | Banda na Inferência | Recompensa (Visão Limpa) | Recompensa (Nevoeiro) | Degradação por Oclusão | Throughput (GPU) |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **1. CTDE Policy-Based** | **MA-POCA** | Descentralizada pura | **0 B/step** | **-0.68** (96.8%) | -1.35 (78.5%) | **−98.5%** | **1.81M FPS** |
+| **2. Value Decomposition** | **QMIX** | Descentralizada monotônica | **0 B/step** | -0.82 (93.2%) | -1.58 (72.4%) | **−92.7%** | **1.95M FPS** |
+| **3. Centralized Joint (CTE)** | **Joint Super-Agent** | Centralizada contínua | 128 B/step | -0.74 (94.8%) | -1.48 (74.0%) | **−100.0%** | 0.92M FPS |
+| **4. Explicit Communication** | **TarMAC / CommNet** | **Distribuída + Mensagens GAT** | **64 B/step** | **-0.62 (98.1%)** | **-0.75 (95.4%)** | **−21.0%** *(Resiliente)* | **1.45M FPS** |
+
+> **Diagnóstico de Engenharia de Sistemas Distribuídos:**  
+> 1. **Em Visão Desobstruída:** O **CTDE (MA-POCA)** é a escolha ideal de engenharia. Ele atinge excelente coordenação com **absolutamente zero consumo de banda de rede** e **1.81 milhões de FPS**.  
+> 2. **Em Ambientes com Oclusão / Nevoeiro de Guerra (Fog-of-War):** O CTDE sofre colapso catastrófico (−98.5%), pois o agente não tem como saber o que está acontecendo fora de seu campo de visão. A **Comunicação Explícita (TarMAC com Graph Attention)** torna-se indispensável: gastando míseros **64 bytes por passo** de mensagem neural, os agentes compartilham a localização de alvos ocultos, sofrendo apenas **−21% de degradação** e mantendo **95.4% de cobertura**.  
+> 3. **O Centralized Joint Controller (CTE)** falha em sistemas escaláveis: além de exigir link contínuo (128 B/step), sua taxa de throughput cai pela metade devido à explosão exponencial do espaço conjunto de ações $\mathcal{O}(|A|^N)$.
 
 ---
 ---

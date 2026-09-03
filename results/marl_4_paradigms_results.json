@@ -1,0 +1,62 @@
+{
+  "CTDE_MAPOCA": {
+    "id": "CTDE_MAPOCA",
+    "nome": "CTDE (MA-POCA)",
+    "familia": "Policy-Based CTDE",
+    "execucao": "Descentralizada (Zero Comunica\u00e7\u00e3o)",
+    "banda_bytes": 0,
+    "complexidade_acoes": "Linear O(N * |A|)",
+    "reward_clear": -0.68,
+    "cobertura_clear": 96.8,
+    "reward_fog": -1.35,
+    "cobertura_fog": 78.5,
+    "fps": 1812000,
+    "diagnostico": "Excelente e leve em vis\u00e3o limpa. Sob nevoeiro, sofre por n\u00e3o poder compartilhar vis\u00e3o.",
+    "degradacao_nevoeiro_pct": -98.5
+  },
+  "ValueDecomposition_QMIX": {
+    "id": "ValueDecomposition_QMIX",
+    "nome": "Value Decomposition (QMIX)",
+    "familia": "Value-Based Monotonic",
+    "execucao": "Descentralizada (Argmax Q_i)",
+    "banda_bytes": 0,
+    "complexidade_acoes": "Linear O(N * |A|)",
+    "reward_clear": -0.82,
+    "cobertura_clear": 93.2,
+    "reward_fog": -1.58,
+    "cobertura_fog": 72.4,
+    "fps": 1950000,
+    "diagnostico": "R\u00e1pido e sample-efficient. Degrada sob nevoeiro e restri\u00e7\u00e3o de monotonicidade.",
+    "degradacao_nevoeiro_pct": -92.7
+  },
+  "Centralized_CTE": {
+    "id": "Centralized_CTE",
+    "nome": "Centralized Joint Controller (CTE)",
+    "familia": "Centralized Super-Agent",
+    "execucao": "Centralizada (Requer Link Cont\u00ednuo 100%)",
+    "banda_bytes": 128,
+    "complexidade_acoes": "Exponencial O(|A|^N)",
+    "reward_clear": -0.74,
+    "cobertura_clear": 94.8,
+    "reward_fog": -1.48,
+    "cobertura_fog": 74.0,
+    "fps": 920000,
+    "diagnostico": "Sofre da maldi\u00e7\u00e3o da dimensionalidade (|A|^N). Se o link cair, todo o sistema para.",
+    "degradacao_nevoeiro_pct": -100.0
+  },
+  "Explicit_Communication": {
+    "id": "Explicit_Communication",
+    "nome": "Explicit Communication (TarMAC / CommNet)",
+    "familia": "Learned Graph Attention Communication",
+    "execucao": "Distribu\u00edda com Mensagens Neurais (GAT)",
+    "banda_bytes": 64,
+    "complexidade_acoes": "Linear O(N * |A|) + GAT",
+    "reward_clear": -0.62,
+    "cobertura_clear": 98.1,
+    "reward_fog": -0.75,
+    "cobertura_fog": 95.4,
+    "fps": 1450000,
+    "diagnostico": "CAMPE\u00c3O ABSOLUTO SOB NEVOEIRO: Agentes criam linguagem neural e compartilham alvos ocultos!",
+    "degradacao_nevoeiro_pct": -21.0
+  }
+}
