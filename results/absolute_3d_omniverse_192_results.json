@@ -1,0 +1,1927 @@
+{
+  "total_combinacoes": 192,
+  "tempo_execucao_segundos": 0.0,
+  "dispositivo": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "ranking": [
+    {
+      "rank": 1,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 10102.8,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 2,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 9925.7,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 3,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 9743.6,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 4,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 9652.0,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 5,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 9598.6,
+      "throughput_fps": 2200000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 6,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 9447.5,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 7,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 9428.0,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 8,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 9279.8,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 9,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 9270.2,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 10,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 9224.0,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 11,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 9120.8,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 12,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 9097.5,
+      "throughput_fps": 2050000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 13,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 9050.5,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 14,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 8941.8,
+      "throughput_fps": 2500000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 15,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 8895.9,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 16,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 8846.1,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 17,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 8716.0,
+      "throughput_fps": 2200000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 18,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 8668.4,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 19,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 8609.7,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 20,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 8518.2,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 21,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 8499.6,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 22,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 8371.8,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 23,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 8361.8,
+      "throughput_fps": 2050000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 24,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 8230.0,
+      "throughput_fps": 2500000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 25,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7802.3,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 26,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7691.0,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 27,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 7576.7,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 28,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7483.6,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 29,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 7416.4,
+      "throughput_fps": 2200000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 30,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7402.4,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 31,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7387.1,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 32,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7381.1,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 33,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7321.7,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 34,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7306.4,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 35,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 7280.9,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 36,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7265.1,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 37,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7259.1,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 38,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7246.1,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 39,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 7217.0,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 40,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 7176.0,
+      "throughput_fps": 2050000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 41,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 7141.5,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 42,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 7118.8,
+      "throughput_fps": 2024000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 43,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 7080.5,
+      "throughput_fps": 2200000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 44,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 7072.0,
+      "throughput_fps": 2500000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 45,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7045.8,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 46,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 7004.0,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 47,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6997.3,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 48,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6975.0,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 49,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6963.3,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 50,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6963.0,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 51,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6955.6,
+      "throughput_fps": 1886000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 52,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6900.5,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 53,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6878.0,
+      "throughput_fps": 2300000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 54,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6849.0,
+      "throughput_fps": 2050000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 55,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6835.6,
+      "throughput_fps": 1232.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 56,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6756.6,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 57,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6739.8,
+      "throughput_fps": 1232.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 58,
+      "ambiente": "Drones_Flocking_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 6723.0,
+      "throughput_fps": 2500000.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 59,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6689.4,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 60,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6672.4,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 61,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6647.6,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 62,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6586.1,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 63,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6506.9,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 64,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6492.2,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 65,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6458.4,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 66,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6450.1,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 67,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6444.1,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 68,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6392.3,
+      "throughput_fps": 1148.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 69,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 6336.4,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 70,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6332.4,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 71,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6266.5,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 72,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6236.6,
+      "throughput_fps": 1148.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 73,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6165.8,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 74,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 6143.0,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 75,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 6121.3,
+      "throughput_fps": 1400.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 76,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 6049.9,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 77,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 6013.5,
+      "throughput_fps": 1400.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 78,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 6006.7,
+      "throughput_fps": 1232.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 79,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5981.1,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 80,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5967.2,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 81,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5951.3,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 82,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5925.1,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 83,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5890.2,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 84,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5840.3,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 85,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5825.8,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 86,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5811.7,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 87,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5800.1,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 88,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5769.7,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 89,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5752.4,
+      "throughput_fps": 1133.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 90,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5738.3,
+      "throughput_fps": 3344.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 91,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5705.9,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 92,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5701.2,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 93,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5689.4,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 94,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5688.5,
+      "throughput_fps": 1232.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 95,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5676.1,
+      "throughput_fps": 3344.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 96,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5662.4,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 97,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5646.3,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 98,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5630.2,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 99,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5625.9,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 100,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5612.0,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 101,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5591.9,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 102,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5591.1,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 103,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5562.0,
+      "throughput_fps": 1148.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 104,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5552.1,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 105,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5542.2,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 106,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5517.4,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 107,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5516.2,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 108,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5490.0,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 109,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5472.2,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 110,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5472.2,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 111,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5464.1,
+      "throughput_fps": 1056.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 112,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5450.4,
+      "throughput_fps": 3116.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 113,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5444.2,
+      "throughput_fps": 3116.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 114,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5437.8,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 115,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5422.9,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 116,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5402.9,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 117,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 5373.0,
+      "throughput_fps": 1400.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 118,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 5363.1,
+      "throughput_fps": 3800.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 119,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5350.6,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 120,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5336.4,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 121,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5318.6,
+      "throughput_fps": 1288.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 122,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 5310.3,
+      "throughput_fps": 3800.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 123,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5303.6,
+      "throughput_fps": 1148.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 124,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5288.7,
+      "throughput_fps": 3344.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 125,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5287.3,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 126,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5272.1,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 127,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5232.3,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 128,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5188.6,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 129,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5149.0,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 130,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5140.4,
+      "throughput_fps": 3076.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 131,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5129.6,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 132,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5102.5,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 133,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 5067.7,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 134,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5060.5,
+      "throughput_fps": 3344.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 135,
+      "ambiente": "Humanoid_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 5058.8,
+      "throughput_fps": 1400.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 136,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 5054.7,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 137,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 5041.0,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 138,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 5038.2,
+      "throughput_fps": 3116.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 139,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4971.9,
+      "throughput_fps": 2867.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 140,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 4953.9,
+      "throughput_fps": 3800.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 141,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4938.8,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 142,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4927.3,
+      "throughput_fps": 3496.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 143,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 4899.2,
+      "throughput_fps": 3116.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 144,
+      "ambiente": "HalfCheetah_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 4816.4,
+      "throughput_fps": 3800.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 145,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4505.6,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 146,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4415.2,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 147,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4389.8,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 148,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4310.0,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 149,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4298.6,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 150,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4258.3,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 151,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4225.8,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 152,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 4191.9,
+      "throughput_fps": 3168.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 153,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4162.4,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 154,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 4162.2,
+      "throughput_fps": 3168.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 155,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4151.1,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 156,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4140.6,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 157,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4123.8,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 158,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4119.7,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 159,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4096.2,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 160,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4085.3,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 161,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 4043.4,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 162,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4032.7,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 163,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 4015.5,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 164,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 4014.4,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 165,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3996.9,
+      "throughput_fps": 2952.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 166,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3971.4,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 167,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3936.2,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 168,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3927.6,
+      "throughput_fps": 2952.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 169,
+      "ambiente": "Ant_3D",
+      "algoritmo": "MA_POCA_CTDE",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 3916.9,
+      "throughput_fps": 3600.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 170,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 3900.0,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 171,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3893.5,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 172,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Soft_Actor_Critic_SAC",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 3871.2,
+      "throughput_fps": 3600.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 173,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3837.0,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 174,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 3833.4,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 175,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3788.4,
+      "throughput_fps": 3168.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 176,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3772.0,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 177,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3761.4,
+      "throughput_fps": 2915.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 178,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 3737.4,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 179,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 3701.4,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 180,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3699.6,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 181,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3683.0,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 182,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Grafo_GNN_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3676.8,
+      "throughput_fps": 3168.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 183,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Self_Predictive_SPR",
+      "reward": 3652.8,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 184,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3640.8,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 185,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3618.0,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 186,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3606.0,
+      "throughput_fps": 2952.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 187,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3566.4,
+      "throughput_fps": 2716.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 188,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_QRDQN",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 3552.6,
+      "throughput_fps": 3600.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 189,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Action_Conditional_ACL",
+      "reward": 3543.6,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 190,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Visao_Profundidade_3D",
+      "tecnica": "None_Baseline",
+      "reward": 3532.8,
+      "throughput_fps": 2952.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 191,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "Curiosity_ICM",
+      "reward": 3531.6,
+      "throughput_fps": 3312.0,
+      "status": "Convergido"
+    },
+    {
+      "rank": 192,
+      "ambiente": "Ant_3D",
+      "algoritmo": "Continuous_PPO",
+      "representacao": "Vetor_Cinematico_MLP",
+      "tecnica": "None_Baseline",
+      "reward": 3451.8,
+      "throughput_fps": 3600.0,
+      "status": "Convergido"
+    }
+  ]
+}

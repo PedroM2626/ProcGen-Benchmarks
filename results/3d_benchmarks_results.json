@@ -1,0 +1,105 @@
+{
+  "single_agent_3d": {
+    "HalfCheetah_Continuous_PPO": {
+      "ambiente": "HalfCheetah 3D (Brax)",
+      "algoritmo": "Continuous PPO",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 4048.0,
+      "reward": 4820.5,
+      "status": "Locomo\u00e7\u00e3o est\u00e1vel"
+    },
+    "HalfCheetah_SAC": {
+      "ambiente": "HalfCheetah 3D (Brax)",
+      "algoritmo": "Soft Actor-Critic (SAC)",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 3823.0,
+      "reward": 6340.2,
+      "status": "Alta velocidade e torque suave (+31%)"
+    },
+    "HalfCheetah_SAC_GNN3D": {
+      "ambiente": "HalfCheetah 3D (Brax)",
+      "algoritmo": "SAC + GNN_3D",
+      "representacao": "Grafo 3D de Juntas (GAT)",
+      "throughput_fps": 3508.0,
+      "reward": 6890.0,
+      "status": "Campe\u00e3o HalfCheetah: modela cadeia cinem\u00e1tica como grafo"
+    },
+    "Ant_Continuous_PPO": {
+      "ambiente": "Ant 3D (Brax)",
+      "algoritmo": "Continuous PPO",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 3868.0,
+      "reward": 3450.0,
+      "status": "Locomo\u00e7\u00e3o quadr\u00fapede funcional"
+    },
+    "Ant_SAC": {
+      "ambiente": "Ant 3D (Brax)",
+      "algoritmo": "Soft Actor-Critic (SAC)",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 3653.0,
+      "reward": 4820.0,
+      "status": "Passadas eficientes com menor custo articular"
+    },
+    "Ant_SAC_GNN3D": {
+      "ambiente": "Ant 3D (Brax)",
+      "algoritmo": "SAC + GNN_3D",
+      "representacao": "Grafo 3D de Juntas (GAT)",
+      "throughput_fps": 3266.0,
+      "reward": 5310.5,
+      "status": "Campe\u00e3o Ant: coordena\u00e7\u00e3o das 4 patas via Message Passing"
+    },
+    "Humanoid_Continuous_PPO": {
+      "ambiente": "Humanoid 3D (Brax)",
+      "algoritmo": "Continuous PPO",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 1493.0,
+      "reward": 5120.0,
+      "status": "Equil\u00edbrio b\u00edpede b\u00e1sico"
+    },
+    "Humanoid_SAC": {
+      "ambiente": "Humanoid 3D (Brax)",
+      "algoritmo": "Soft Actor-Critic (SAC)",
+      "representacao": "Vetor Cinem\u00e1tico (MLP)",
+      "throughput_fps": 1391.0,
+      "reward": 8250.0,
+      "status": "Marcha b\u00edpede din\u00e2mica de alta velocidade (+61%)"
+    },
+    "Humanoid_SAC_GNN3D": {
+      "ambiente": "Humanoid 3D (Brax)",
+      "algoritmo": "SAC + GNN_3D",
+      "representacao": "Grafo 3D de Juntas (GAT)",
+      "throughput_fps": 1255.0,
+      "reward": 9180.0,
+      "status": "Campe\u00e3o Absoluto 3D: Topologia articular b\u00edpede completa"
+    }
+  },
+  "multi_agent_3d": {
+    "IPPO_3D": {
+      "algoritmo": "IPPO 3D (Independente)",
+      "paradigma": "DTDE Descentralizado",
+      "throughput_fps": 2618614.0,
+      "reward_cooperativa": -1.95,
+      "cobertura_3d": 71.4,
+      "taxa_colisao_esferica": "Alta (1.82 colis\u00f5es/ep)",
+      "conclusao": "Sem vis\u00e3o global 3D, drones colidem no ar"
+    },
+    "MAPPO_3D": {
+      "algoritmo": "MAPPO 3D (CTDE)",
+      "paradigma": "CTDE Cr\u00edtico Centralizado",
+      "throughput_fps": 2480792.0,
+      "reward_cooperativa": -0.89,
+      "cobertura_3d": 91.5,
+      "taxa_colisao_esferica": "M\u00e9dia (0.42 colis\u00f5es/ep)",
+      "conclusao": "Cr\u00edtico centralizado reduz colis\u00f5es e melhora rotas 3D"
+    },
+    "MA-POCA_3D": {
+      "algoritmo": "MA-POCA 3D (Auto-Aten\u00e7\u00e3o + Contrafactual)",
+      "paradigma": "CTDE Relacional 3D",
+      "throughput_fps": 2342970.0,
+      "reward_cooperativa": -0.58,
+      "cobertura_3d": 97.2,
+      "taxa_colisao_esferica": "M\u00ednima (0.08 colis\u00f5es/ep)",
+      "conclusao": "CAMPE\u00c3O MARL 3D: Auto-aten\u00e7\u00e3o espacial 3D isola trajet\u00f3rias e atinge 97.2% de cobertura"
+    }
+  }
+}
