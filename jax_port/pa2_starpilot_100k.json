@@ -1,0 +1,28 @@
+{
+  "game": "starpilot",
+  "seed": 42,
+  "timesteps": 106496,
+  "wall_s": 14.6,
+  "sps": 7281.1,
+  "train_episodes": 1234,
+  "train_ret_mean20": 2.05,
+  "hparams": {
+    "lr": 0.0003,
+    "gamma": 0.99,
+    "lambda": 0.95,
+    "clip": 0.2,
+    "epochs": 3,
+    "num_envs": 64,
+    "rollout": 128,
+    "minibatch": 1024
+  },
+  "phase_s": {
+    "rollout": 8.37,
+    "gae": 0.46,
+    "update": 5.79
+  },
+  "eval_unseen": {
+    "mean": 1.9,
+    "eps": 10
+  }
+}

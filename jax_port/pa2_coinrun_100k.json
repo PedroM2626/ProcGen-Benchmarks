@@ -1,0 +1,28 @@
+{
+  "game": "coinrun",
+  "seed": 42,
+  "timesteps": 106496,
+  "wall_s": 12.3,
+  "sps": 8647.1,
+  "train_episodes": 839,
+  "train_ret_mean20": 7.5,
+  "hparams": {
+    "lr": 0.0003,
+    "gamma": 0.99,
+    "lambda": 0.95,
+    "clip": 0.2,
+    "epochs": 3,
+    "num_envs": 64,
+    "rollout": 128,
+    "minibatch": 1024
+  },
+  "phase_s": {
+    "rollout": 8.99,
+    "gae": 0.45,
+    "update": 2.87
+  },
+  "eval_unseen": {
+    "mean": 3.0,
+    "eps": 10
+  }
+}

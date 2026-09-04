@@ -627,9 +627,9 @@ Como pré-condição de PA0, a grade Craftax então em execução foi **parada c
 
 ---
 
-## 15. Estado Atual, Limites e Próximos Passos (PA1 concluído, PA2 em aberto)
+## 15. Estado Atual, Limites e Próximos Passos (PA2-velocidade concluído; paridade em aberto)
 
-**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX está no estágio **PA0 superado + PA1 concluído**: além da prova de coexistência, existe agora pipeline vetorizado CPU→GPU (`jax_port/vector_env.py`, `jax_port/bench_throughput.py`) e medição própria de FPS — sempre no mesmo branch `main`, por decisão do autor (o porte vive em `jax_port/`, sem tocar nos arquivos do estudo). Reimplementação dos extratores em Flax e paridade de treino seguem em aberto (PA2+).
+**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX, no mesmo branch `main` (diretório `jax_port/`, sem tocar nos arquivos do estudo), atingiu **PA0 + PA1 + PA2-velocidade**: treino PPO real com gradientes a **7–8,6k steps/s** — acima da meta de 3–5k (§15.2). Em aberto: paridade estatística com o estudo (grade multi-seed, IC/Cohen/AUC/eval-duplo/budget-scaling) e demais arquiteturas além da NatureCNN.
 
 ### 15.1. PA1 — pipeline e throughput medido (04/09/2026, venv `/root/procgen-jax`, WSL2, `coinrun`, ações aleatórias, 3000 steps)
 
@@ -651,13 +651,33 @@ wsl -e env PYTHONPATH=/mnt/c/Users/Acer/Downloads/MLE \
 
 Fonte: `jax_port/pa1_throughput.json`. Avisos `gym`/`np.bool8` durante o bench são esperados (API legada do ProcGen, mesma fronteira da seção 14.3).
 
-> **Leitura honesta:** (1) o env cru escala pouco de 1→16 envs (12,6k→18,7k) — loop síncrono single-process em Python; multiprocesso/`gym3` é o ganho futuro. (2) O sync por step (`asarray` + JIT + `block_until_ready` a cada passo) domina o custo: com 1 env, o pipeline entrega ~`300 FPS`, indistinguível do baseline de treino SB3 (~`300 FPS`, seção 1.4) — mas aqui **sem nenhum update de rede**. (3) O batching amortiza o sync: 16 envs → ~`3k FPS` pré-learner, ou seja, ~`10x` de headroom sobre o legado **antes** do custo do PPO. A tese do caminho A continua de pé, com a ressalva explícita de que o FPS de treino real (PA2, com gradientes) será menor que estes 3k. Nenhum número de treino JAX é afirmado aqui.
+> **Leitura honesta:** (1) o env cru escala pouco de 1→16 envs (12,6k→18,7k) — loop síncrono single-process em Python; multiprocesso/`gym3` é o ganho futuro. (2) O sync por step (`asarray` + JIT + `block_until_ready` a cada passo) domina o custo: com 1 env, o pipeline entrega ~`300 FPS`, indistinguível do baseline de treino SB3 (~`300 FPS`, seção 1.4) — mas aqui **sem nenhum update de rede**. (3) O batching amortiza o sync: 16 envs → ~`3k FPS` pré-learner, ou seja, ~`10x` de headroom sobre o legado **antes** do custo do PPO. A tese do caminho A continua de pé; o FPS de treino real com gradientes foi medido em seguida (§15.2) e superou estes 3k de pipeline.
 
-**Próximo passo (PA2).** Reimplementar os extratores em Flax com paridade de pré-processamento (`HWC→CHW`, `uint8`, `frame_stack=1`) e de PPO (hiperparâmetros da seção 1.4 + GAE/clipping/minibatches), validar paridade numérica num subconjunto e só então estimar o FPS real de treino.
+**Próximo passo (paridade PA2).** Grade multi-seed com o protocolo definitivo do estudo (eval `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e demais extratores em Flax; barra de aceitação inalterada: **reproduzir ordenação e barras de erro dentro do ruído entre-seeds**.
 
-**Riscos conhecidos para PA2+.** Paridade de pré-processamento (`HWC→CHW`, `uint8`, normalização, `frame_stack=1`), paridade de PPO (hiperparâmetros da seção 1.4 + GAE/clipping/minibatches idênticos), paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k`). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
+### 15.2. PA2-velocidade — treino PPO real a 7–8,6k SPS (04/09/2026, `/root/procgen-jax`, WSL2, RTX 4070 Laptop)
 
-**Artefatos do porte (mesmo branch, por decisão do autor).** Os scripts originais do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`) foram apagados da árvore na restauração e permanecem só como registro histórico/§14.3 (eram arquivos nunca commitados, portanto não recuperáveis via `git show` — sua função está documentada aqui). O porte retomado vive em `jax_port/` no próprio `main`: `jax_port/vector_env.py` (fronteira fiel a `procgen_wrapper.py:29,41,91`), `jax_port/bench_throughput.py` e `jax_port/pa1_throughput.json`. O diretório do estudo (raiz, `models/`, `results/`) segue intocado.
+Learner: `jax_port/networks.py` (NatureCNN fiel a `models/sb3_extractors.py:8`, layout NHWC), `jax_port/ppo.py` (surrogate clipado + value-clip + entropia; lr 3e-4, γ 0.99, λ 0.95, clip 0.2, 3 epochs, vf 0.5, ent 0.01, grad-clip 0.5, adv-norm — hparams do estudo em `compare_suite.py:26`), `jax_port/train.py` (64 envs C++ `gym3`, rollout 128, minibatch 1024). Ajustes só de batching: n_envs 64 (estudo: 1), minibatch 1024 (estudo: 64), adv-norm 1x/epoca no host.
+
+```bash
+wsl -e env PYTHONPATH=/mnt/c/Users/Acer/Downloads/MLE \
+  /root/procgen-jax/bin/python \
+  /mnt/c/Users/Acer/Downloads/MLE/jax_port/train.py \
+  --game coinrun --timesteps 100000 --seed 42 --num-envs 64
+```
+
+| Jogo | Steps | Wall treino | **SPS treino** | Train-ret | Eval unseen 10 eps | Baseline SB3 |
+|---|---|---:|---:|---:|---:|---|
+| `coinrun` seed 42 | 106.496 | 12,3 s | **8.647** | 7,50 | 3,0 | ~120–300 (≈7 min/50k, §2) → **~30–70x** |
+| `starpilot` seed 42 | 106.496 | 14,6 s | **7.281** | 2,05 | 1,9 | ~167 (≈10 min/100k, §1.4) → **~40x** |
+
+Fontes: `jax_port/pa2_coinrun_100k.json`, `jax_port/pa2_starpilot_100k.json` (fases `rollout`/`gae`/`update` registradas no JSON). Curva intra-run: 4,9k → 7,1k → 7,6k SPS (rampa conforme o init é amortizado).
+
+> **Leitura honesta:** (1) a meta de 3–5k foi **superada com treino real** (gradientes incluídos), não só pipeline — 100k steps em ~12–15 s vs ~7–10 min no SB3. (2) Os speedups (~30–70x) comparam SPS medido aqui contra tempos reportados nas seções 1–2, em hardwares/épocas distintos mas mesma máquina (RTX 4070 Laptop) — ordem de grandeza, não cronometragem pareada. (3) Custos únicos fora da medida de SPS: autotune cuDNN/XLA (~3,5 min, uma vez, cache persistente em `/tmp/jax_port_cache`) + init GPU/allocator (~4 s por processo). (4) **Não é paridade científica ainda**: 1 seed, eval 10 eps, só NatureCNN — os retornos (coinrun eval 3,0 vs 7,6–8,0 do estudo; starpilot 1,9 vs ~2,0) são prova de aprendizado, não equivalência. (5) Armadilha documentada: gather com índice no device (`d_obs[d_mb]`) mediu 457ms/call vs 12ms/call com slicing no host + H2D contíguo (~40x) — o loop usa o caminho rápido (`train.py`, `ppo.py`).
+
+**Riscos conhecidos para a paridade.** Paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k` — agora ~2–4 h de treino em vez de dias). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
+
+**Artefatos do porte (mesmo branch, por decisão do autor).** Os scripts originais do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`) foram apagados da árvore na restauração e permanecem só como registro histórico/§14.3 (eram arquivos nunca commitados, portanto não recuperáveis via `git show` — sua função está documentada aqui). O porte vive em `jax_port/` no próprio `main`: `vector_env.py` (fronteira fiel a `procgen_wrapper.py:29,41,91`), `bench_throughput.py` + `pa1_throughput.json` (PA1), `networks.py` + `ppo.py` + `train.py` + `pa2_*_100k.json` (PA2-velocidade). O diretório do estudo (raiz, `models/`, `results/`) segue intocado.
 
 ---
 
