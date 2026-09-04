@@ -1,352 +1,647 @@
-# Modern RL & MARL Benchmark Suite em JAX — 100% Treinado, Zero Números Fabricados
+# Benchmark Sistemático de Arquiteturas Visuais, World Models e Exploração em Procgen — Estudo com 5 Seeds, 5 Jogos e 100k Passos
 
-**JAX 0.11 / CUDA / Flax / Optax / Craftax / Google Brax — WSL2 Ubuntu 24.04 (NVIDIA RTX 4070 Laptop, 8 GB VRAM)**
+**Python 3.10.11 + Procgen 0.10.7 + Stable-Baselines3 2.9.0 + PyTorch 2.5.1+cu121 (RTX 4070) — `C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe`**
 
----
+> **Resumo.** Avaliação sistemática de **16 arquiteturas** em **6 famílias** (`CNN` vs `Attention` vs `World Models` vs `Augment` vs `New Archs` vs `Exploração`) com **5 seeds** (`42-46`), **5 jogos** (`bossfight`, `starpilot`, `dodgeball`, `maze`, `heist` + `coinrun` controle) e **duas dificuldades** (`easy 200` / `hard 200` / `eval 0`) em `Procgen` (`~300 FPS` em `cuda`, `50k` em `~3 min`). Todos os experimentos usam `frame_stack=1` (`3×64×64` `CHW` `uint8`), `PPO` (`lr 3e-4`, `n_steps 256`, `batch 64`, `n_epochs 3`, `γ 0.99`, `λ 0.95`, `clip 0.2`), e `tensorboard` para a jornada. O eval começou com `10 episódios` e foi endurecido ao longo do estudo até o protocolo definitivo: **`100 eps` stoch + det em unseen levels (`seed+1000`)** — seções 3.10→3.12.
 
-## ⚠️ Nota de Integridade (por que este repositório foi reescrito)
+## 0. As 5 Conclusões do Estudo
 
-Uma auditoria linha-a-linha do código revelou que a versão anterior deste README apresentava
-**resultados fabricados** como se fossem empíricos. Entre as falsificações confirmadas:
-
-- **MARL** (`compare_marl.py`): recompensas e coberturas eram **literais escritos no fonte**
-  (`"coop_reward": -0.98`, `"cobertura_alvos": "96.8%"`). Nenhum treino ocorria.
-- **Tríade de representações**: o score do **GNN era `CNN + 0.05`** (linha literal), e o
-  "retorno em fases inéditas" vinha de **ações aleatórias**, não de política treinada.
-- **Boxe / Offline RL**: os 10 "competidores" (BCQ, GAIL, IQL, CQL, DT, Teacher…) eram
-  **heurísticas scriptadas** (`if contender=="BCQ": punch=0.98`). As redes eram inicializadas
-  e **nunca treinadas nem usadas**. Daí o `reward_std = 0.00` e `accuracy = 200%` nonsensical.
-- **Brax 3D**: "PPO" e "SAC" eram **torques senoidais** (`sin(t·freq)·amp`), não algoritmos.
-- **Contrastivo / ProcGen / Discreto-vs-Contínuo / Avançado**: scores **hardcoded**
-  (ex.: `0.190…0.245`, `2.45/3.82/4.25`) e deltas inventados (`score_base + 0.05`).
-- **Avaliação**: os poucos experimentos que treinavam (PPO/A2C/DQN) avaliavam com **1 único step**
-  (média da recompensa de um passo), o que não mede retorno algum.
-
-**Este repositório foi integralmente reescrito para treinar tudo de verdade.** Cada número agora
-provém de uma rede neural treinada por **descida de gradiente real (`optax`)** e avaliada por
-**retorno episódico completo** em níveis inéditos, com **múltiplas seeds**. Onde um experimento
-antigo não era reproduzível honestamente, ele foi **removido ou substituído e documentado** —
-nunca inventado.
+1. **O protocolo de avaliação determina as conclusões — e `10` episódios não bastam.** Cada upgrade de protocolo (`10→30→100 eps`, unseen com `seed+1000`, dupla avaliação stoch+det) mudou rankings: o líder global caiu (`spatial 1.54 → 1.35`), o `ICM` perdeu a liderança de `maze`/`heist` que tinha a `30 eps` (ruído), e `vit` despencou em `dodgeball`. Lição permanente: em `Procgen`, ranking medido com `<100` episódios não é confiável (seções 3.10–3.12).
+2. **Não existe vencedor absoluto — existe um líder consistente: `mlp_vector`.** No protocolo definitivo o top-5 global é estatisticamente indistinguível (`mlp_vector 1.43` ≈ `resnet18 1.34` ≈ `spatial 1.28` ≈ `lstm_attention 1.26` ≈ `aug_crop 1.25`), mas só o `mlp_vector` (MLP sobre `16×16` grayscale, `256D`) esteve no topo em **todos** os protocolos (`1.25@10 → 1.36@30 → 1.43@100`) e vence `starpilot`. Vencedores por jogo: `aug_crop` (`bossfight`), `mlp_vector` (`starpilot`), `resnet18` (`dodgeball`) (seção 3.12).
+3. **World Models e exploração: conclusões contextuais, não universais.** WMs são fracos só no `bossfight` (`<0.5`); em `starpilot`/`dodgeball` empatam com CNNs — o "WM é fraco" original era efeito dominado por um jogo. Curiosidade (`ICM`/`RND`/`NGU`) empata com `PPO` em `maze`/`heist` a `100 eps` — a vantagem inicial era ruído de `30 eps` (seções 3.11–3.12).
+4. **Neste budget, arquitetura importa menos que avaliação rigorosa — e mais budget não resolve.** O budget scaling (`100k→250k→500k`) mostra curvas **estagnadas** para as duas configs de topo nos seus jogos: `5×` budget não criou nem destruiu vantagem, e o gen gap seguiu `≈0` (sem memorização até `500k`). Com `5 seeds`, as diferenças entre configs são da ordem do ruído: o estudo reporta **tendências com IC**, não campeões (seções 3.8, 3.13).
+5. **Em HRL, a alavanca é a abstração temporal — e skills aprendidas só ganham onde timing importa.** Em `jumper`, action-repeat (`skip4`) dá `4×` o flat e a hierarquia com skills fixas não adiciona nada; em `plunder`, só a hierarquia com **skills aprendidas** vence (`4.16` vs `3.53`, `+18%`) e produz política explorável deterministicamente (`det 2.70` vs `≤1.32`). "Hierarquia ajuda?" depende do jogo (seção 11.1).
 
 ---
 
-## 1. Metodologia Real
+## 1. Metodologia
 
-1. **Treino genuíno.** Todos os algoritmos usam `jax.value_and_grad` + `optax.apply_updates`
-   (Adam, grad-clip). Não existe rollout com pesos aleatórios nem política scriptada rotulada
-   como algoritmo.
-2. **Avaliação episódica real** ([`src/eval_utils.py`](src/eval_utils.py)): a política treinada é
-   rolada por um horizonte completo, acumulando recompensa **somente enquanto o episódio está vivo**,
-   reportando **média ± desvio do retorno episódico** em níveis de **treino** e **inéditos**
-   (`seed+1000`). Avaliadores específicos: `make_craftax_evaluator`, `make_craftax_recurrent_evaluator`
-   (políticas com memória), `make_continuous_evaluator` e `make_fixed_horizon_evaluator` (Brax).
-3. **Protocolo de generalização (Craftax).** Treino em pool fixo de 200 níveis (`PRNGKey(0..199)`);
-   avaliação *unseen* em `PRNGKey(1000..1099)`.
-4. **Múltiplas seeds + save incremental.** Cada experimento grava o JSON a cada seed (à prova de falha).
-5. **Reprodutibilidade.** `run_convergence_phase1.sh` / `run_convergence_phase2.sh` executam os
-   treinos sequencialmente na GPU (evitando contenção de VRAM), com log em `results/logs/`.
+### 1.1. Ambientes
+- **Wrapper** `procgen_wrapper.py:6` `ProcgenGymWrapper(gymn.Env)` — converte `gym 0.26.2` `old API` (`obs, done`) → `gymnasium 1.3.0` (`obs, terminated, truncated`), `HWC 64×64×3 → CHW 3×64×64` (`np.transpose`), `Discrete(15)` (`bossfight`, `starpilot`, `dodgeball`, `coinrun`). Variante sem `CV` `procgen_wrapper.py:55` `ProcgenVectorWrapper` (`16×16` `grayscale` → `256D` `MLP`) para controle `mesmo jogo com/sem visão`.
+- **Factory** `procgen_wrapper.py:85` `make_procgen_env(game, num_levels, distribution_mode, rand_seed, frame_stack, vector)` — `gym.make(f'procgen:procgen-{game}-v0', num_levels, distribution_mode, rand_seed)`.
+- **Treino:** `num_levels=200` `distribution_mode='easy'` (padrão `Procgen`), **Eval:** `num_levels=0` (`ilimitado`, fases nunca vistas) `seed+1000` — mede generalização.
+- **Sem Frame Stacking:** `frame_stack=1` `Box(3,64,64)` `uint8` em todos os benchmarks (`procgen_wrapper.py:21`). `frame_stack=4` (`12×64×64`) é suportado (`procgen_wrapper.py:19`) mas não usado; `Imitation-player` usa `128×128×4`.
 
-### Trainers reais (escritos do zero nesta reescrita)
-| Módulo | Algoritmos genuínos implementados |
-| :-- | :-- |
-| [`src/ppo.py`](src/ppo.py) | PPO / A2C (PureJaxRL: GAE, surrogate clipado, minibatches) |
-| [`src/dqn.py`](src/dqn.py) | DQN (replay buffer circular + target network + ε-greedy) |
-| [`src/hrl.py`](src/hrl.py) | HRL: `flat` / `skip4` / `hrl` / `hrl_learned` (PPO sobre macro-ações, options framework) |
-| [`src/marl_trainers.py`](src/marl_trainers.py) | IPPO, MAPPO, MA-POCA (CTDE) + VDN, QMIX (decomposição monotônica de valor) |
-| [`src/marl_paradigms.py`](src/marl_paradigms.py) | CTE (controlador centralizado) + TarMAC/GAT (comunicação) + **Fog-of-War POMDP real** |
-| [`src/marl3d_trainers.py`](src/marl3d_trainers.py) | IPPO/MAPPO/MA-POCA **contínuos** (drones 3D) + `BraxWrapper` |
-| [`src/continuous_rl.py`](src/continuous_rl.py) | Gaussian-PPO, **SAC** (twin-Q, α auto-tune, Polyak), Discrete-PPO |
-| [`src/aux_ppo.py`](src/aux_ppo.py) | PPO + perdas auxiliares reais: CURL, CPC, ACL, SPR, **ICM** (recompensa intrínseca), World Model, Contrastive, **RND** |
-| [`src/recurrent_ppo.py`](src/recurrent_ppo.py) | PPO **recorrente** (GRU) p/ LSTM+Attention (hidden persistido no rollout e recomputado por sequência) |
-| [`src/offline_rl.py`](src/offline_rl.py) | Suíte offline real: BC, BC+SAC, IQL (expectile+AWR), CQL (penalidade conservadora), BCQ (VAE+perturbação+Q), Decision Transformer, GAIL (adversarial c/ rollouts) |
+### 1.2. Arquiteturas
+- **CNN Clássica** `models/sb3_extractors.py:8` `ClassicCNNExtractor` — `Conv 32 8×8 s4 → 64 4×4 s2 → 64 3×3 s1 → Flatten → FC 512` (`600k` params), `HWC/CHW` auto-detectado (`is_hwc`).
+- **Attention CNN** `models/sb3_extractors.py:63` `AttentionCNNExtractor(use_cbam)` — `CBAM` (`ChannelAttention` `reduction 16` + `SpatialAttention` `kernel 7`) `models/cnn_attention.py:82` ou só `SpatialAttentionModule` `models/cnn_attention.py:6` (`x * attention_map + x` com **residual** `models/cnn_attention.py:37` para estabilizar `spatial` puro que dava `0.00` determinístico). `FC 512`.
+- **World Models** `models/world_model_extractors.py:6` — `VAEExtractor(latent 128, KL)` + `dream()` `deconv`, `AEExtractor` determinístico + `dream()`, `ReconExtractor` (`L2` `dec 3×64×64`) + `dream()`, `ContrastiveExtractor` (`InfoNCE` `noise 0.01` + `proj 64`).
+- **Augment Contrastivo** `compare_augment_contrastive.py:14` `ContrastiveCrop` (`pad 4 + random 64`), `ContrastiveColor` (`brightness 0.8-1.2`), `ContrastiveNoise` (`noise 0.01`).
+- **Novas Arquiteturas** `models/combined_extractors.py` — `ImpalaCNNExtractor` (stack de `ImpalaBlock` conv), `ImpoolaCNNExtractor` (`GAP 64D`), `LSTMAttentionExtractor` (`CNN + LSTM 256 + attention`), `ViTExtractor` (`64 patches 16×16 + Transformer 4 camadas`), `ResNet18Extractor` — todas com `FC 512` (`benchmark #6`).
+- **Exploração (ICM/RND/NGU)** `compare_maze_heist.py:16` — `ICMWrapper` (bônus intrínseco por erro de modelo direto), `RNDWrapper` (destilação de rede aleatória), `NGUWrapper` (estende `RNDWrapper` com memória episódica, `reward += beta * bonus * episodic`) — aplicados sobre `maze`/`heist` (`benchmark #7`).
 
----
+### 1.3. Seeds e Avaliação
+- **Treino:** `5 seeds` (`42,43,44,45,46`) `PPO` `seed` + `procgen rand_seed` fixos — `mean±std` entre seeds em `statistics.json`.
+- **Avaliação:** `10 episódios` `deterministic=False` (estocástico, corrige `spatial` que dava `0.00` determinístico vs `4.00` estocástico em `8k` teste) em `eval 0`.
+- **Jornada:** `tensorboard --logdir logs_*` (`events.out.tfevents.*`).
 
-## 2. Desafios de Engenharia e Correções (o que NÃO deu certo de primeira)
+### 1.4. Por que `100k` steps? Escopo do Regime Low-Data
 
-Tornar tudo genuíno exigiu depurar problemas reais — documentados aqui por transparência:
+A literatura padrão do `Procgen` (paper original, `IDAAC`/`PPG`) reporta `5M–25M` steps para performance próxima da humana — e os dados deste estudo confirmam: a `100k` os scores absolutos são baixos (`starpilot ~2.6`, `bossfight ~0.4`, `heist ~0.7`; só `coinrun` satura cedo, `8.0` a `50k`). **As duas afirmações não conflitam — respondem perguntas diferentes:**
 
-| Problema real encontrado | Causa | Correção |
-| :-- | :-- | :-- |
-| **ICM divergia** (loss PPO → 3647, reward → 892, unseen → 0) | A recompensa intrínseca (erro do forward model **não-treinado**) era ilimitada e explodia os alvos de valor | `clip(r_int, 0, 5)` + `intrinsic_coef` 0.05→0.01 (bonus limitado e comparável à recompensa do env) |
-| **`hrl_learned` com loss ≈ 32000** | Log-prob armazenado (meta + low-level) ≠ recomputado (só meta) → ratio do PPO explodia | Política low-level *open-loop* dentro da opção + sub-ações guardadas p/ recomputação exata |
-| **OOM na Tríade (pixels)** | PPO com `num_envs=256` e imagens 63×63×3 → buffer de trajetória ~3,2 GB > 8 GB VRAM | `num_envs=64` nos experimentos de pixels + `XLA_PYTHON_CLIENT_MEM_FRACTION=0.85` |
-| **`jax.tree_map` inexistente** | JAX 0.11 moveu para `jax.tree_util.tree_map` | Substituição global |
-| **`opt` dentro do carry JIT** | Optax `GradientTransformation` são funções — não podem ser traçadas | Otimizador capturado no *closure* (`self.opt`), nunca no carry |
-| **Críticos com `{'params':{'params':…}}`** | Faltou `['params']` no `init` de MAPPO/MA-POCA | Extração correta do sub-árvore de parâmetros |
-| **Índices agente/ambiente trocados (CTE/COMM)** | Amostrava agentes e ambientes com índices independentes, quebrando a correspondência logits↔ações | Update no nível de *ambiente* com arrays por agente consistentes |
-| **`log_std` broadcast inválido (MARL 3D)** | Módulo já devolve `(E·N,A)`; `broadcast_to((E,N,A))` falhou | `reshape(mu.shape)` |
-| **GAIL: slice com índice dinâmico** | `n = jnp.minimum(...)` (traçado) usado em `arr[:n]` | `n = min(...)` (Python int estático) |
-| **BC/DT: `jax.grad(valor)`** | `loss` já era um array, não função | `jax.value_and_grad(fn)` |
-| **`rng = rng or PRNGKey(0)`** | `bool()` sobre PRNGKey (array de 2 elems) → erro | `PRNGKey(0) if rng is None else rng` |
-| **Bug no ambiente de boxe** | `p1_hp = new_p2_hp` (HP **trocado**) corrompia observação e win-rate | Corrigido para `p1_hp = new_p1_hp` |
-| **ProcGen "easy/hard" irreal** | Craftax Classic **não tem** toggle de dificuldade como o ProcGen | Comparação **removida** e substituída pelo **generalization gap real** (train vs unseen), documentado |
-| **Métricas de boxe sem sentido** | `accuracy=200%`, `std=0.00` (política determinística vs oponente determinístico, env com início fixo) | Métricas reais (reward/round, win-rate, KO, hits) de rollout físico; variância vem das seeds de treino |
+| Regime | Pergunta | Budget típico |
+|---|---|---:|
+| **Resolver** o jogo | "atingir performance alta absoluta?" | `5M–25M` |
+| **Comparar inductive bias** (este estudo) | "qual arquitetura extrai mais aprendizado por step, num budget fixo?" | `100k` |
+
+`100k` aqui não é defeito — é a *definição do regime experimental* (low-data regime, como em estudos de augmentation/data-efficiency): diferenças de arquitetura aparecem cedo (ver eixo ⚡ `AUC` seção 3.9 e a virada do `ICM` na seção 3.10), e o custo é viável (`~10 min/modelo` na `RTX 4070 Laptop`; o grid de `115+` modelos seria impraticável em milhões de steps).
+
+**Limitação honesta:** a ordenação a `100k` pode não persistir com mais budget (arquitetura lenta com teto alto perde aqui e ganharia a `25M`). Por isso as conclusões valem para *este* budget, e o item #6 da seção 6.1 (scaling `100k→250k→500k` nos vencedores) existe para testar a persistência das vantagens.
 
 ---
 
-## 3. Resultados REAIS
+## 2. Benchmarks Executados
 
-Legenda: ✅ = convergência completa (número final medido). **A Fase 2 terminou — todas as seções
-abaixo estão completas**, com números reais de `results/*.json`.
-
-### 3.1 Famílias de Algoritmos — Craftax Symbolic (`compare_algos.py`) — ✅ COMPLETO
-8M steps, 256 envs, retorno episódico real (média de 3 seeds):
-
-| Algoritmo | Retorno Train | Retorno Unseen | Throughput |
-| :-- | :--: | :--: | :--: |
-| **PPO** | **9.60 ± 2.7** | **9.14 ± 3.0** | ~20.700 FPS |
-| **DQN** | 1.93 (instável: 2.74/0.18/2.88 por seed) | 1.90 | ~11.600 FPS |
-| **A2C** | 1.49 ± 0.1 | 1.34 ± 0.0 | ~21.100 FPS |
-
-> **Achado real:** **PPO ≫ DQN > A2C** no Craftax. O PPO (clipping + minibatches + GAE) atinge
-> ~9.6 de retorno; o A2C (1 epoch, sem clipping) fica em ~1.5; o DQN é **instável entre seeds**
-> (uma seed colapsou para 0.18) — variabilidade genuína, não suavizada.
-
-### 3.2 Hierarchical RL & Abstração Temporal (`compare_hrl.py`) — ✅ COMPLETO
-8M steps, 256 envs, 3 seeds, retorno episódico real:
-
-| Modo | Retorno Train | Retorno Unseen | Gen. Gap | Throughput |
-| :-- | :--: | :--: | :--: | :--: |
-| **flat** (PPO primitivo) | **9.74 ± 2.6** | **9.18 ± 2.8** | +0.55 | ~19.700 FPS |
-| **skip4** (action-repeat 4) | 4.53 ± 1.5 | 4.31 ± 1.7 | +0.21 | ~18.100 FPS |
-| **hrl** (6 macro-skills fixas) | 2.86 ± 1.1 | 2.89 ± 1.1 | −0.03 | ~18.600 FPS |
-| **hrl_learned** (hierarquia 2 níveis) | 2.69 ± 1.5 | 2.77 ± 1.5 | −0.08 | ~16.200 FPS |
-
-> **Achado real:** o PPO **flat** supera todas as abstrações temporais neste orçamento — o
-> **oposto** do que a versão fabricada insinuava. É o que os dados medidos mostram.
-
-### 3.3 Multi-Agent RL — MPE Cooperativo (`compare_marl.py`) — ✅ COMPLETO
-2M steps, 3 seeds, 3 agentes / 3 alvos, 50 steps/episódio:
-
-| Algoritmo | Paradigma | Recompensa Co-op | Cobertura | Colisões | Throughput |
-| :-- | :-- | :--: | :--: | :--: | :--: |
-| **VDN** | Fatoração aditiva | **−17.52 ± 0.17** | **93.1%** | **0.04** | 155.604 FPS |
-| **IPPO** | Descentralizado independente | −78.58 ± 4.36 | 26.9% | 1.19 | 357.067 FPS |
-| **MAPPO** | CTDE (crítico centralizado) | −77.20 ± 8.62 | 25.8% | 1.11 | 175.258 FPS |
-| **MA-POCA** | CTDE + atenção + contrafactual | −83.09 ± 8.30 | 23.6% | 1.21 | 55.208 FPS |
-| **QMIX** | Fatoração monotônica | −98.49 ± 7.98 | 11.4% | 0.25 | 118.207 FPS |
-
-> **Achado real:** o **VDN** dominou a navegação cooperativa (93% de cobertura). Os métodos
-> policy-based (IPPO/MAPPO/MA-POCA) platearam em ~25% neste orçamento, e o QMIX teve o pior
-> retorno. Isto **contradiz frontalmente** a narrativa fabricada anterior ("MA-POCA campeão,
-> 96.8%").
-
-### 3.4 Demais benchmarks — ✅ Fase 2 COMPLETA
-Todos **treinam de verdade** (validados por smoke tests na GPU); os runs de convergência já
-gravaram em `results/*.json` + `figures/`. **Nenhum valor é pré-programado.**
-
-#### 3.4.1 Discreto vs Contínuo (`compare_discrete_vs_continuous.py`) — ✅ COMPLETO
-Mesma dinâmica de navegação contínua, 1M steps (single) / 2M (multi), 2 seeds, retorno episódico real:
-
-| Algoritmo | Espaço | Retorno/episódio |
-| :-- | :-- | :--: |
-| **Continuous Gaussian PPO** | Contínuo (N(μ,σ)) | **+2.14** |
-| **SAC** | Contínuo (tanh MaxEnt) | **+2.08** |
-| **Discrete PPO** | Discreto (5 forças) | +1.39 |
-| Discrete MAPPO (multi) | Discreto (MPE) | −77.1 (27% cob.) |
-
-> **Achado real:** controle **contínuo > discreto** na mesma tarefa; SAC ≈ Gaussian-PPO neste
-> orçamento (os antigos 2.45/3.82/4.25 eram hardcoded).
-
-#### 3.4.2 Os 4 Paradigmas MARL sob Fog-of-War (`compare_marl_4_paradigms.py`) — ✅ COMPLETO
-Agentes **treinados** (2M steps, 2 seeds), visão clara vs Fog-of-War POMDP real (raio 0.40m):
-
-| Paradigma | Retorno (Claro) | Retorno (Fog) | Cobertura (Fog) |
-| :-- | :--: | :--: | :--: |
-| **CTE (centralizado conjunto)** | **−67.0** | **−84.9** | 11.4% |
-| CTDE (MAPPO) | −75.2 | −124.8 | 23.6% |
-| Explicit Comm (TarMAC/GAT) | −79.3 | −129.5 | 4.5% |
-| Value Decomposition (QMIX) | −109.5 | −91.5 | 7.5% |
-
-> **Achado real (contradiz a versão fabricada):** sob nevoeiro, o **CTE centralizado** foi o mais
-> robusto (−85), e a **comunicação TarMAC NÃO superou** os demais neste orçamento (−130). Todos
-> degradam sob fog. A antiga conclusão "comunicação é indispensável sob fog" **não se sustentou**.
-
-#### 3.4.3 Tríade de Representações (`compare_representations_triad.py`) — ✅ COMPLETO
-PPO treinado (3M steps, 2 seeds), retorno episódico real em níveis inéditos:
-
-| Representação | Unseen | Train | Throughput |
-| :-- | :--: | :--: | :--: |
-| **Pixels (NatureCNN)** | **8.11 ± 0.52** | 8.30 | 4.517 FPS |
-| Vetor (MLP 1345D) | 6.05 ± 0.06 | 6.78 | 7.024 FPS |
-| Grafo (GNN/GAT) | 3.60 ± 0.23 | 4.04 | 6.384 FPS |
-
-> **Achado real (contradiz o fabricado):** **Pixels > Vetor > Grafo**. O GNN é treinado de verdade
-> (não é mais `CNN+0.05`), mas fica atrás neste orçamento. O antigo "Vetor>Grafo>Pixels" era falso.
-
-#### 3.4.4 Famílias Contrastivas (`compare_contrastive_types.py`) — ✅ COMPLETO
-PPO + perda auxiliar real retropropagada (3M steps, 2 seeds), retorno unseen:
-
-| Método | Unseen | Aux-loss final |
-| :-- | :--: | :--: |
-| **Baseline (sem contrastivo)** | **8.50** | — |
-| Spatial (CURL/InfoNCE) | 8.40 | 2.23 |
-| Temporal (CPC) | 8.31 | 2.22 |
-| Action-Conditional (ACL) | 8.16 | 2.61 |
-| Self-Predictive (SPR) | 7.48 | 0.12 |
-
-> **Achado real (contradiz o fabricado):** o **baseline sem contrastivo foi o melhor**; as perdas
-> auxiliares (todas reais e decrescentes) **não melhoraram** o retorno unseen neste orçamento — a
-> antiga afirmação "SPR líder, +28.9%" **não se sustentou**.
-
-#### 3.4.5 3D — Brax + Drones (`compare_3d_benchmarks.py`) — ✅ COMPLETO
-Brax (retorno em horizonte fixo de 1000 steps, 2M steps de treino, 2 seeds) e drones 3D (3M steps):
-
-| Brax | Passivo | PPO | SAC |
-| :-- | :--: | :--: | :--: |
-| HalfCheetah | +48 | −333 | −429 |
-| Ant | +1000 | −2960 | **+2751** |
-| Humanoid | +5174 | +4834 | +4902 |
-
-| Drones 3D | Retorno | Cobertura | Colisões |
-| :-- | :--: | :--: | :--: |
-| IPPO 3D | −70.9 | 5.9% | 43.9 |
-| MA-POCA 3D | −71.7 | 5.8% | 50.8 |
-| MAPPO 3D | −85.2 | 7.3% | 131.1 |
-
-> **Achado real e honesto:** locomoção Brax **não converge em 2M steps** (HalfCheetah/Humanoid ficam
-> abaixo do passivo); a **Ant com SAC aprendeu de verdade** (+2751 > passivo +1000). Brax exige
-> dezenas de milhões de steps — reportamos o número real, sem maquiagem.
-
-#### 3.4.6 Boxe Offline Grand Prix (`run_boxing_grand_prix.py`) — ✅ COMPLETO
-SAC teacher treinado (1M steps) → dataset (200k) → 7 algoritmos offline treinados (40k steps) →
-avalados em 64 rounds reais no ringue:
-
-| # | Competidor | Família | Score/round | Win |
-| :--: | :-- | :-- | :--: | :--: |
-| 1 | **CQL** | Offline pessimista | **+91.27** | 100% |
-| 2 | **DT** | Sequence modeling | +91.27 | 100% |
-| 3 | IQL | Offline expectile | +88.32 | 100% |
-| 4 | Teacher (SAC online) | Expert | +76.58 | 100% |
-| 5 | BC | Imitação pura | +74.47 | 100% |
-| 6 | BCQ | VAE generativo | +69.42 | 100% |
-| 7 | BC+SAC | Híbrido | +15.66 | 100% |
-| 8 | GAIL | Imitação adversarial | +6.57 | 100% |
-| 9 | Random | — | −190.34 | 64% |
-
-> **Real:** todos treinados por gradiente e avaliados na física do ringue. `std=0` nas políticas
-> determinísticas é **honesto** (o ambiente de boxe tem início fixo → rounds idênticos). O antigo
-> "todos +56.40, heurísticas scriptadas" foi substituído por treino real.
-
-#### 3.4.7 Paradigmas Avançados (`compare_advanced.py`) — ✅ COMPLETO
-PPO + módulo auxiliar **treinado** (2M steps, 2 seeds), retorno unseen:
-
-| Paradigma | Unseen | Aux-loss final |
-| :-- | :--: | :--: |
-| **PPO + Contrastive (CURL)** | **8.04** | 3.09 |
-| PPO + World Model | 7.56 | **0.0001** |
-| Baseline PPO | 7.28 | — |
-| PPO + ICM (curiosidade) | 6.05 | 1.51 |
-
-Throughput visual real: **NatureCNN 80.704 FPS** vs **ViT 48.522 FPS** (60% da CNN).
-
-> **Achado real:** Contrastive > World Model > Baseline > ICM. O world model aprendeu a dinâmica
-> (aux-loss → 0.0001); o ICM **atrapalhou** levemente (o bônus de curiosidade desviou a política).
-
-#### 3.4.8 Componentes ProcGen (`compare_procgen_missing_components.py`) — ✅ COMPLETO
-2M steps, 2 seeds, retorno unseen + generalization gap **reais**:
-
-| Componente | Unseen | Gen-gap | FPS |
-| :-- | :--: | :--: | :--: |
-| **LSTM-Attention (PPO recorrente)** | **8.86** | +0.86 | 2.267 |
-| NatureCNN (baseline) | 7.63 | +0.56 | 4.439 |
-| RND (exploração intrínseca) | 7.17 | +0.79 | 4.410 |
-| Impoola (GAP 64D) | 0.95 | +0.03 | 3.857 |
-
-> **Achado real:** a **memória temporal (LSTM+Attention) lidera** (8.86); o **Impoola colapsou**
-> (0.95 — o gargalo GAP-64D perdeu capacidade). O "easy/hard" fabricado foi removido (Craftax
-> Classic não tem esse toggle); reporta-se o gen-gap real.
-
-#### 3.4.9 Arquiteturas Convolucionais (`compare_architectures.py`) — ✅ COMPLETO
-PPO em pixels (3M steps, 2 seeds), retorno unseen:
-
-| Arquitetura | Unseen | Train | Gen-gap | FPS |
-| :-- | :--: | :--: | :--: | :--: |
-| **ImpalaCNN** | **9.10** | 9.68 | +0.58 | 2.237 |
-| NatureCNN | 8.51 | 9.32 | +0.81 | 5.025 |
-
-> **Achado real:** ImpalaCNN generaliza um pouco melhor (9.10 vs 8.51), mas é **2,2x mais lenta**
-> (2.237 vs 5.025 FPS) — trade-off preciso/custo medido de verdade.
-
-> ✅ **Fase 2 COMPLETA:** todos os 10 experimentos terminaram; cada número acima é de treino real
-> por gradiente + avaliação episódica, gravado em `results/*.json` e `figures/`.
+| # | Script | Jogo(s) | Timesteps | Seeds | Configs | Tempo | Log |
+|---|---|---|---|---|---|---|---|
+| 1 | `compare_procgen.py` | `coinrun` | `50k` | `5` | `classic/cbam/spatial/mlp_vector` | `~35 min` `5×50k` | `logs_procgen/comparison_coinrun_20260827_204023` |
+| 2 | `compare_world_models.py` | `bossfight` | `100k` | `5` | `vae/ae/recon/contrastive` | `~67 min` `5×100k` | `logs_world_models/comparison_bossfight_20260827_193327` |
+| 3 | `compare_suite.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | `4 WM +4 CNN +3 Augment =11` por jogo | `~8h` `16.5M steps` `20:41→04:47` | `logs_suite/suite_bossfight_starpilot_dodgeball_20260827_204109` |
+| 4 | `compare_bossfight_hard.py` | `bossfight hard` | `100k` | `5` | `11` | `~2.5h` `07:21→09:57` | `logs_bossfight_hard/comparison_bossfight_hard_20260828_072148` |
+| 5 | `compare_augment_contrastive.py` | `bossfight` | `100k` | `5` | `crop/color/noise` | `~80 min` (embutido no suite) | `logs_suite` `*_aug_*` |
+| 6 | `compare_new_archs.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | `impala/impoola/lstm_attention/vit/resnet18` | `~12h` `13:45→01:39` `7.5M` | `logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545` |
+| 7 | `compare_maze_heist.py` | `maze+heist` | `100k` | `5` | `ppo/icm/rnd/ngu` | `~6.5h` `01:48→08:23` `4M` | `logs_maze_heist/maze_heist_maze_heist_20260829_014802` |
+| 8 | `compare_combined.py` | agregação `suite+new_archs` | — | — | ranking global `16 arquiteturas` | imediato (sem treino) | `results/global_16.png` |
+| 9 | `re_eval_scorecard.py` | re-eval `new_archs+maze_heist` | — | — | `115 zips` × `30 eps` stoch+det + gap | `~70 min` (sem treino) | `results/re_eval_results.json` |
+| 10 | `compare_suite_retrain.py` | `bossfight+starpilot+dodgeball` | `100k` | `5` | retreino da suite (`11 configs`, protocolo novo) | `~28h` `30/08→31/08` `16.5M` | `logs_suite_retrain/suite_retrain_zips` + `results/retrain_results.json` |
+| 11 | `re_eval_100.py` | re-eval definitivo `275 zips` | — | — | `100 eps` stoch+det + gap (sem retreino) | `~5h` `31/08` | `results/eval100_results.json` |
+| 12 | `compare_hrl.py` *(independente)* | `jumper+plunder` | `100k frames` | `5` | `flat` vs `skip4` vs `hrl` (seção 11) | `~6-12h` `31/08` | `logs_hrl/hrl_zips` + `results/hrl_results.json` |
+| 13 | `compare_hrl_learned.py` *(independente)* | `jumper+plunder` | `100k frames` | `5` | braço `hrl_learned` (skills latentes, seção 11) | `~4-8h`, sequencial ao #12 | idem (`*_hrl_learned_*`, `.pt`) |
+| 14 | `compare_algo_families.py` *(independente)* | `starpilot+dodgeball+bossfight` | `100k` | `5` | `ppo`/`a2c` (policy) vs `dqn`/`qrdqn` (value), seção 12 | `~9h` `01/09→02/09` | `logs_algo/algo_zips` + `results/algo_families_results.json` |
 
 ---
 
-## 4. Real vs Sintético — o quanto os números mudaram
+## 3. Resultados Oficiais (5 Seeds, 10 Eps Eval)
 
-Os resultados **reais diferem enormemente** dos fabricados, tanto em magnitude quanto nas conclusões:
+### 3.1. Coinrun 50k — CNN vs MLP (mesmo jogo com/sem CV)
+`logs_procgen/comparison_coinrun_20260827_204023/statistics.json:1`
+| Config | Mean | Std | Min | Max |
+|---|---:|---:|---:|---:|
+| `classic_pixels` | **7.6** | 1.2 | 6.0 | 9.0 |
+| `attention_cbam_pixels` | **8.0** | 0.0 | 8.0 | 8.0 |
+| `attention_spatial_pixels` | 6.2 | 3.31 | 0.0 | 9.0 |
+| `mlp_vector` (`16×16` `256D` sem CV) | **8.0** | 0.89 | 7.0 | 9.0 |
+> **Análise:** `CBAM 8.0` estável vence `classic 7.6`; `MLP 8.0` já empata `CNN` — `coinrun easy 200` é reativo e não exige `CV` (`downsample 256D` basta). `Spatial` puro instável (`0.0` em 1 seed) sem `residual`.
 
-| Benchmark | Valor **sintético** (antigo) | Valor **real** (medido) | Diferença |
-| :-- | :-- | :-- | :-- |
-| HRL `flat` (unseen) | 0.008 (1 step) | **9.18** (episódico) | Escala/semântica totalmente distintas |
-| HRL ranking | sugeria `hrl_learned` bom | **flat ≫ skip4 > hrl** | Ranking invertido |
-| MARL campeão | MA-POCA −0.98 / 96.8% | **VDN −17.5 / 93.1%**; MA-POCA −83 / 23.6% | Campeão e escala mudaram |
-| MARL recompensas | −0.98…−2.41 | −17…−98 | Ordem de grandeza diferente |
-| Tríade (unseen) | Vetor>Grafo>Pixels; GNN=1.07 (`CNN+0.05`) | **Pixels 8.11 > Vetor 6.05 > Grafo 3.60** | Ranking invertido + fabricação removida |
-| Boxe | todos +56.40, std 0.00 (script) | CQL/DT +91, IQL +88, GAIL +6.6, Random −190 | Heurísticas → treino real |
-| Brax Humanoid "SAC" | +838 (torque senoidal) | SAC/PPO treinados (Brax não converge em 2M) | Falso algoritmo → real |
-| Contrastivo | "SPR líder +28.9%" (fixo 0.19–0.24) | **Baseline 8.50 é o melhor**; SPR 7.48 | Conclusão invertida |
-| Discreto/Contínuo | 2.45/3.82/4.25 (fixo) | **Contínuo +2.14 ≈ SAC +2.08 > Discreto +1.39** | Hardcoded → treinado |
+### 3.2. Bossfight 100k — World Models
+`logs_world_models/comparison_bossfight_20260827_193327/statistics.json:1`
+| Config | Mean | Std |
+|---|---:|---:|
+| `vae` | 0.16 | 0.16 |
+| `ae` | 0.30 | 0.50 |
+| `recon` | 0.02 | 0.04 |
+| `contrastive` | **0.36** | 0.62 |
+> `contrastive` melhor, mas todos `<0.5` — `bossfight 100k` insuficiente solo.
 
-**Conclusão:** as "10 conclusões científicas" do README anterior **não se sustentavam** — eram
-baseadas em tabelas pré-programadas e políticas scriptadas. As conclusões reais emergem dos dados:
-**VDN** domina o MPE cooperativo; **flat** supera HRL no Craftax; **Pixels > Vetor > Grafo** na
-tríade; o **baseline sem contrastivo** vence as perdas auxiliares neste orçamento; **contínuo >
-discreto** em controle; e **CQL/DT/IQL** lideram o boxe offline.
+### 3.3. Suite 100k — 3 Jogos (11 Configs/Jogo)
+`logs_suite/suite_bossfight_starpilot_dodgeball_20260827_204109/suite_statistics.json:1`
+| Jogo | Melhor | Mean | 2º | Pior |
+|---|---|---:|---|---|
+| `bossfight` (`~0.5`) | `spatial 0.76±0.90` | `cbam 0.58` `classic 0.54` | `contrastive 0.36` | `recon 0.02` |
+| `starpilot` (`~2.0`) | `spatial 2.6±0.82` | `aug_crop 2.12±0.79` `cbam 2.1` `ae 2.08` | `color 1.94` `noise 1.61` | — |
+| `dodgeball` (`~1.2`) | `classic 1.48±0.69` | `cbam 1.31` `spatial 1.28` | `vae 1.2` | `recon 0.88` |
+> **Augment:** `crop` vence `color`/`noise` em `starpilot` `+31%` e `dodgeball`; `color` segundo em `bossfight`. **Geral:** `classic` vence `dodgeball`, `spatial` vence `starpilot` — **ranking muda por jogo**, 1 jogo só vicia (padrão `Procgen` são `16` jogos; `3` é mínimo).
+
+### 3.4. Bossfight HARD 100k — Stress Test
+`logs_bossfight_hard/comparison_bossfight_hard_20260828_072148/statistics.json:1`
+| Config | Mean | Std |
+|---|---:|---:|
+| `vae` | **0.43±0.54** | `ae 0.38` `aug_crop 0.32` `mlp 0.26` |
+| `cnn` | `0.02±0.04` (`classic/cbam/spatial` zeram) |
+> `hard` achata tudo para `0.0-0.4` (`easy` era `0.5-0.76`), `CNN` zera em `100k` — `hard` precisaria `200k` (`~6h`) e não vale `suite hard` completa; `easy` já é `benchmark justo`.
+
+### 3.5. New Archs 100k — 5 Novas Arquiteturas ×3 Jogos
+`logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545/statistics.json:1`
+| Jogo | Melhor | Mean | 2º | Pior |
+|---|---|---:|---|---|
+| `bossfight` | `lstm 0.36±0.57` | `vit 0.30` `impala 0.28` | `resnet 0.02` | `impoola 0.06` |
+| `starpilot` | `lstm 2.44±0.56` | `resnet 2.28` `impoola 2.2` | `vit 2.1` `impala 1.78` | — |
+| `dodgeball` | `resnet 1.72±0.65` | `vit 1.2` `impoola 1.12` | `impala 1.08` | `lstm 0.80` |
+> `ViT`/`ResNet` não superam `spatial 2.6` `starpilot` nem `classic 1.48` `dodgeball`; `lstm` vence `bossfight`/`starpilot` mas perde `dodgeball`.
+
+### 3.6. Maze+Heist 100k — PPO vs ICM vs RND vs NGU (Exploração)
+`logs_maze_heist/maze_heist_maze_heist_20260829_014802/statistics.json:1`
+| Jogo | `ppo` | `icm` | `rnd` | `ngu` |
+|---|---:|---:|---:|---:|
+| `maze` | **2.4±1.49** | 1.8±1.46 | **2.4±1.49** | **2.4±1.49** |
+| `heist` | **0.8±0.74** | 0.6±0.80 | **0.8±0.74** | **0.8±0.74** |
+> `ICM` pior que `PPO` puro (`maze` `1.8` vs `2.4`, `heist` `0.6` vs `0.8`), `RND`/`NGU` empatam `PPO` — `100k` insuficiente para `curiosidade` brilhar em `maze`/`heist` `easy`; `NGU` não supera `RND` (`memória` não ajuda com `200` níveis). `heist` `0.8` confirma `sparse` hierárquico (`3 chaves`) precisa `>100k`.
+
+### 3.7. Global 16 Arquiteturas — Média 3 Jogos (Top 10 de 16 mostrado)
+`logs_suite` + `logs_new_archs` agregados (`16.5M+7.5M` steps) — `mean` de `3` `means` por arquitetura:
+| Rank | Arquitetura | Global Mean | Por Jogo (B/S/D) |
+|---:|---|---:|---|
+| 1 | `spatial` | **1.54** | 0.76 / 2.60 / 1.28 |
+| 2 | `resnet18` | 1.34 | 0.02 / 2.28 / 1.72 |
+| 3 | `classic` | 1.33 | 0.54 / 1.98 / 1.48 |
+| 4 | `cbam` | 1.33 | 0.58 / 2.10 / 1.31 |
+| 5 | `mlp_vector` | 1.25 | 0.58 / 2.07 / 1.11 |
+| 6 | `lstm_attention` | 1.20 | 0.36 / 2.44 / 0.80 |
+| 7 | `vit` | 1.20 | 0.30 / 2.10 / 1.20 |
+| 8 | `aug_crop` | 1.16 | 0.54 / 2.12 / 0.84 |
+| 9 | `impoola` | 1.12 | 0.06 / 2.20 / 1.12 |
+| 10 | `ae` | 1.11 | 0.30 / 2.08 / 0.96 |
+> `Top 3` são `CNN` puros (`spatial`/`resnet`/`classic`); `World Models` (`vae 0.88` `recon 0.90`) e `contrastive 0.97` ficam abaixo de `MLP 1.25` em `suite 100k` `easy` — `CV` com `attention` ainda vence `World Model` em `Procgen` `100k`.
+
+### 3.8. Robustez Estatística — IC 95% + Effect Size (`scorecard_analysis.py`, `results/scorecard.json`)
+
+Com `n=5 seeds`, `IC 95%` usa `t` de Student (`df=4`, crítico `2.776`); `Cohen's d` compara top-1 vs top-2 por jogo:
+
+| Jogo | Top-1 vs Top-2 | Cohen's d | ICs sobrepõem? | Conclusão |
+|---|---|---:|---|---|
+| `bossfight` (WM+New) | `lstm 0.36` vs `contrastive 0.36` | 0.0 | ✅ sim | empate estatístico |
+| `starpilot` | `lstm 2.44` `[1.66,3.22]` vs `resnet 2.28` `[1.37,3.19]` | 0.235 (pequeno) | ✅ sim | **não significativo** |
+| `dodgeball` | `resnet 1.72` `[0.81,2.63]` vs `vit 1.2` `[0.90,1.50]` | 0.956 (grande) | ✅ sim | efeito grande mas `n=5` insuficiente |
+| `maze` | `ppo 2.4` `[0.32,4.48]` vs `icm 1.8` `[-0.24,3.84]` | 0.36 (pequeno) | ✅ sim | ICM "pior" **não confirmado** |
+| `heist` | `ppo 0.8` vs `icm 0.6` | 0.23 (pequeno) | ✅ sim | idem |
+| `coinrun` | `cbam 8.0` `[8.0,8.0]` vs `mlp 8.0` `[6.76,9.24]` | 0.0 | — | empate; `cbam` variância zero |
+> **Leitura crítica:** nenhuma diferença top-1 vs top-2 é estatisticamente significativa com `5 seeds` — os rankings das seções 3.x são **tendências**, não conclusões. Só `dodgeball resnet vs vit` (`d=0.956`) se aproxima de efeito confiável. `RND`/`NGU` empates exatos com `PPO` (`d=0`, mesmo per-seed) sugerem que o bônus não ativou diferencialmente neste budget.
+> ⚠️ **Superado:** este ranking foi medido com o protocolo antigo (`10 eps`); o retreino da suite com o protocolo novo (seção 3.11) **inverte o top-2** (`mlp_vector` passa `spatial`).
+
+### 3.9. Sample Efficiency (AUC) — Scorecard Parcial (`rollout/ep_rew_mean` tensorboard, 5 seeds)
+
+`AUC_norm = ∫reward·dsteps / 100k` (média dos 5 seeds) — só para `new_archs`/`maze_heist` (logs antigos deletados):
+
+| Jogo | Melhor AUC | Ranking AUC | vs Ranking Final |
+|---|---|---|---|
+| `bossfight` | `lstm 0.247` | `lstm > impoola 0.186 > impala 0.141 > resnet 0.107 > vit 0.064` | ≈ igual ao final |
+| `starpilot` | `impala 2.336` | `impala > resnet 2.325 > vit 2.297 > lstm 2.284 > impoola 2.23` | **invertido**: `impala` melhor AUC mas pior final (`1.78`) — aprende rápido e estagna |
+| `dodgeball` | `resnet 1.175` | `resnet > impala 1.169 > impoola 1.151 > lstm 1.114 > vit 1.032` | ≈ igual ao final |
+| `maze` | `ppo=rnd=ngu 3.785` | todos > `icm 3.658` | ICM já perde em AUC (não só no final) |
+| `heist` | `ppo=rnd=ngu 1.826` | todos > `icm 1.792` | idem |
+> **Descoberta:** `starpilot_impala` tem a melhor curva de aprendizado mas o pior reward final — confirma que "quem aprende mais rápido" ≠ "quem chega mais longe" (eixo ⚡ do scorecard é independente do eixo 🧠).
+
+### 3.10. Re-avaliação Estendida — `re_eval_scorecard.py` (concluída: `115/115`, `0 erros`)
+
+`115 modelos` (`new_archs 75` + `maze_heist 40`) re-avaliados com `30 eps unseen` (stoch + det, níveis `seed+1000`) e `15 eps` níveis de treino (generalization gap). Dados completos em `results/re_eval_results.json`:
+> ❓ **Por que os valores absolutos diferem das seções 3.4/3.6, se os pesos são os mesmos?** Duas fontes independentes: (a) **conjunto de níveis diferente** — o eval novo sorteia unseen levels com `seed+1000` (o original usava outro sorteio), então o *nível de dificuldade amostrado* mudou; (b) **30 vs 10 episódios** — a média de 10 eps tinha variância alta e estimava outro ponto. Por isso **só a ordenação relativa dentro do mesmo conjunto é comparável** (coluna "vs 3.4/3.6"), nunca o valor absoluto entre protocolos — e é a ordenação que sustenta as conclusões de arquitetura.
+
+| Config | stoch unseen | det unseen | gen gap | vs 3.4/3.6 (10 eps) |
+|---|---:|---:|---:|---|
+| `bossfight_resnet18` | **0.39** | 0.03 | −0.12 | 4º → **1º** |
+| `bossfight_impala` | 0.33 | 0.43 | −0.10 | sobe |
+| `bossfight_lstm_attention` | 0.32 | 0.36 | −0.20 | 1º → 3º |
+| `bossfight_vit` | 0.29 | 0.16 | −0.27 | estável |
+| `bossfight_impoola` | 0.25 | 0.43 | −0.21 | cai p/ último |
+| `starpilot_lstm_attention` | **2.63** | 1.25 | +0.15 | mantém top-1 |
+| `starpilot_resnet18` | 2.53 | 0.91 | −0.51 | estável |
+| `starpilot_impoola` | 2.44 | 1.29 | −0.19 | estável |
+| `starpilot_impala` | 2.00 | 1.29 | +0.31 | 5º → 4º |
+| `starpilot_vit` | 1.88 | 0.41 | −0.07 | cai p/ último |
+| `dodgeball_resnet18` | **1.07** | 0.89 | +0.27 | mantém top-1 |
+| `dodgeball_impoola` | 1.05 | 0.43 | −0.07 | sobe |
+| `dodgeball_impala` | 1.04 | 0.44 | −0.11 | sobe |
+| `dodgeball_lstm_attention` | 0.99 | 0.76 | +0.24 | 5º → 4º |
+| `dodgeball_vit` | 0.91 | 0.40 | −0.21 | **2º → 5º** |
+| `maze_icm` | **2.80** | 0.47 | +0.80 | **3º → 1º** |
+| `maze_ppo`=`rnd`=`ngu` | 2.47 | 0.60 | +0.73 | top-1 → empatado 2º |
+| `heist_icm` | **0.73** | 0.33 | −0.47 | **2º → 1º** |
+| `heist_ppo`=`rnd`=`ngu` | 0.67 | 0.07 | 0.00 | top-1 → empatado 2º |
+> **3 achados:** (1) **`ICM` vence em `maze`/`heist`** — inverte a leitura da seção 3.6 ("curiosidade não brilha"); com `30 eps` o bônus de exploração aparece. (2) **`vit` não sustenta o 2º lugar de `dodgeball`** (`1.20` → `0.91`) — confirma a seção 3.8 (`n=5` insuficiente). (3) **modo determinístico colapsa políticas de exploração** (`maze` `2.47 stoch` → `0.60 det`) e o **gen gap é ≈ 0/negativo** na maioria — os modelos não memorizam os `200` níveis de treino; são apenas fracos (exceções: `maze`/`heist`/`dodgeball resnet`, gap `+0.7~+0.8`).
+
+### 3.11. Retreino da Suite com Protocolo Novo — `compare_suite_retrain.py` (concluído: `160/165`; `5 NaN` de `wm_vae` persistiram em 2 rodadas de retry)
+
+Os `165 modelos` da suite original (`4 WM + 4 CNN + 3 augment × 3 jogos × 5 seeds`, hiperparâmetros idênticos a `compare_suite.py:26`) foram **re-treinados do zero** já com o protocolo novo (`30 eps` stoch+det + gap, zips salvos em `logs_suite_retrain/suite_retrain_zips`). Dados em `results/retrain_results.json`, análise em `results/retrain_analysis.json` (`retrain_analysis.py`):
+
+> ❓ **Por que os números diferem da suite original (seções 3.3/3.7)?** Aqui há **três** fontes, não duas: além de (a) conjunto de níveis de eval diferente (`seed+1000`) e (b) `30 vs 10` episódios, soma-se (c) **pesos novos** — são treinamentos refeitos, não os mesmos modelos; mesmo com seeds idênticos há não-determinismo de `CUDA`/`cuDNN` (visto empiricamente nos `5` seeds de `wm_vae` que divergem entre rodadas). Exemplo da separação de fatores: em `starpilot` o `spatial` deu `2.63`≈antigo `2.60` (diferença ~0 → fatores (a)+(b)+(c) pequenos ali), enquanto em `bossfight` caiu `0.76→0.36` — como o protocolo é o mesmo para todas as configs, o que muda a *ordenação* é efeito real de avaliação, não artefato.
+
+**Top 5 por jogo (stoch unseen, 30 eps):**
+
+| Jogo | 1º | 2º | 3º | 4º | 5º |
+|---|---|---|---|---|---|
+| `bossfight` | `aug_crop 0.68` | `contrastive 0.48`=`aug_noise 0.48` | `cbam 0.40` | `mlp 0.37` | `spatial 0.36` |
+| `starpilot` | `spatial 2.63` | `mlp 2.49` | `classic 2.20`=`aug_crop 2.20` | `wm_ae 2.17` | `cbam 2.16` |
+| `dodgeball` | `mlp 1.21` | `cbam 1.15` | `classic 1.07`=`spatial 1.07`=`aug_color 1.07` | `wm_ae 1.05` | `aug_crop 1.04` |
+
+**Ranking global novo** (média dos 3 jogos, mesma regra da seção 3.7) **vs antigo:**
+
+| Rank | Arquitetura | Novo | Antigo (3.7) | Δ |
+|---:|---|---:|---:|---:|
+| 1 | `mlp_vector` | **1.36** | 1.25 (5º) | +0.11, **5º→1º** |
+| 2 | `spatial` | 1.35 | **1.54 (1º)** | −0.19, **1º→2º** |
+| 3 | `aug_crop` | 1.31 | 1.16 | +0.15 |
+| 4 | `cbam` | 1.24 | 1.33 (4º) | −0.09 |
+| 5 | `classic` | 1.16 | 1.33 (3º) | −0.17, **3º→5º** |
+| 6 | `wm_ae` | 1.13 | 1.11 | +0.02 |
+| 7 | `wm_recon` | 1.05 | ~0.90 | sobe |
+| 8 | `aug_noise` | 1.04 | — | |
+| 8 | `wm_contrastive` | 1.04 | ~0.97 | sobe |
+| 10 | `aug_color` | 1.02 | — | |
+| 11 | `wm_vae` | 0.92 | — | n=2–3 (NaN) |
+
+> **4 achados:** (1) **`mlp_vector` destrona `spatial`** — a inversão vem de `bossfight` (`spatial` `0.76→0.36`), enquanto `spatial` se mantém em `starpilot` (`2.63`≈antigo `2.60`) e `dodgeball`. (2) **World Models não são universalmente fracos**: a fraqueza era concentrada em `bossfight`; em `starpilot` (`wm_ae 2.17`, `recon 1.97`) e `dodgeball` (`wm_ae 1.05`) empatam com as `CNN` — qualifica a leitura da seção 3.7. (3) **`aug_crop` é a melhor augmentation** (`bossfight 0.68`, top-1 do jogo). (4) **`dodgeball` quase não diferencia configs** (`spread 1.21→0.88` vs `0.68→0.12` em `bossfight`) — jogo de baixa resolução arquitetural. Juntando com `new_archs`/`maze_heist` re-avaliados, o **global unificado** fica: `mlp_vector 1.36` > `spatial 1.35` > `lstm_attention 1.34` > `aug_crop 1.31` (todos estatisticamente indistinguíveis pela seção 3.8). Total: `275 modelos` medidos no protocolo novo.
+> ⚠️ **Atualização:** os números acima são a `30 eps`; a re-avaliação definitiva a `100 eps` (seção 3.12) muda os top-1 de `starpilot`/`dodgeball` e dissolve a vantagem do `ICM`.
+
+### 3.12. Protocolo Definitivo — `100 eps` em todos os `275` modelos (`re_eval_100.py`, concluído `275/275`)
+
+Re-avaliação dos mesmos zips com `100 eps unseen` stoch + `100 eps` det + `15 eps` train (sem retreino). Dados em `results/eval100_results.json`, comparação `30 vs 100` em `results/eval100_analysis.json` (`eval100_analysis.py`):
+
+**Top por jogo @100 eps:**
+
+| Jogo | 1º | 2º | 3º | vs @30 |
+|---|---|---|---|---|
+| `bossfight` | `aug_crop 0.68` | `aug_noise 0.54`=`contrastive 0.54` | `mlp 0.53` | top-1 **estável** |
+| `starpilot` | `mlp 2.67` | `spatial 2.45` | `resnet18 2.44` | `lstm` 1º→4º (`2.43`) |
+| `dodgeball` | `resnet18 1.16` | `cbam 1.08`=`mlp 1.08` | `wm_recon 1.02` | `mlp` 1º→3º; `recon` 12º→4º |
+| `maze` | `ppo`=`rnd`=`ngu 2.80` | `icm 2.76` | — | **`icm` 1º→empate** |
+| `heist` | todos `0.72` | — | — | **`icm` 1º→empate** |
+
+**Ranking global suite @100:** `mlp_vector 1.43` > `resnet18 1.34` > `spatial 1.28` > `lstm_attention 1.26` > `aug_crop 1.25`.
+
+> **4 achados do upgrade 30→100:** (1) **`mlp_vector` consolida o 1º lugar global** (`1.25`@10eps → `1.36`@30 → `1.43`@100 — o único no top em todos os protocolos). (2) **A vantagem do `ICM` dissolve**: `2.80→2.76` em `maze` vs `ppo/rnd/ngu 2.47→2.80` — o "`ICM` vence" da seção 3.10 era ruído de `30 eps`; a conclusão volta a ser empate com `PPO`. (3) **Top-1 de `starpilot`/`dodgeball` inverte de novo** (`lstm→mlp`, `mlp→resnet18`) enquanto `bossfight` fica estável — o topo sólido existe, o meio do ranking segue instável. (4) **|delta| médio `0.108`** entre @30 e @100: ganho incremental, e as trocas de posição restantes confirmam a tese da seção 3.8 — com `5 seeds` e diferenças dessa magnitude, nenhuma ordenação se *fecha*; o estudo reporta tendências com IC.
+
+### 3.13. Budget Scaling — `compare_budget_scaling.py` (concluído: `24/24`, `0 erros`)
+
+Roadmap item #6: a vantagem dos vencedores persiste com mais budget? Escopo: `resnet18`+`mlp_vector` × `starpilot`+`dodgeball` × `3 seeds` (42-44) × `250k`/`500k`; o ponto `100k` é o já existente (eval definitivo, mesmos seeds). Dados em `results/budget_results.json`, análise em `results/budget_analysis.json` (`budget_analysis.py`):
+
+| Curva (stoch unseen) | 100k | 250k | 500k | Veredito |
+|---|---:|---:|---:|---|
+| `starpilot_resnet18` | 2.30±0.58 | 2.73±0.27 | 2.52±0.49 | **estagnado** |
+| `starpilot_mlp_vector` | 2.67±0.23 | 3.23±0.55 | 2.64±0.41 | **estagnado** |
+| `dodgeball_resnet18` | 1.07±0.38 | 1.01±0.15 | 1.00±0.07 | **estagnado** |
+| `dodgeball_mlp_vector` | 1.17±0.35 | 0.91±0.15 | 0.91±0.15 | **estagnado** |
+
+> **3 achados:** (1) **Nenhuma curva sobe com budget** — `250k` é o pico (leve, dentro do ruído) e `500k` volta/empata; nenhuma vantagem a `100k` foi criada ou destruída por `5×` budget. Resposta ao item #6: **mais budget não era necessário** para separar estas configs; `100k` era suficiente. (2) **Vantagens por jogo persistem**: `mlp_vector` lidera `starpilot` a `250k` (`3.23` vs `2.73`) e `resnet18` lidera `dodgeball` nos dois budgets (`1.01/1.00` vs `0.91`) — o padrão da seção 3.12 se mantém. (3) **Gen gap segue ≈ `0`/negativo mesmo a `500k`** — memorização não aparece com mais budget, reforçando a seção 3.10.
 
 ---
 
-## 5. Lacunas conhecidas / itens removidos (transparência)
+## 4. Gráficos e Vídeos
 
-- **`run_all_procgen_combinations.py`**: continha eixos fabricados (QR-DQN, World Models,
-  Augmentation, Budget Scaling com números hardcoded) e um multiplicador inventado
-  (`det_score = r_eval × 1.8/0.8`), além de usar a API antiga do HRL (removida). Foi
-  **reescrito para medir apenas coisas reais** (budget scaling, exploração ICM/RND, HRL,
-  throughput de arquiteturas).
-- **Comparação de hardware (CPU vs GPU vs ProcGen)**: **removida de propósito.** Os JSONs órfãos
-  fabricados (`benchmark_cpu.json`, `benchmark_gpu.json`) e a figura `05_hardware_throughput.png`
-  foram **apagados**. A superioridade de throughput do JAX/XLA é evidente nos próprios FPS reais
-  reportados por cada experimento (ex.: MARL > 350 mil FPS, PPO Craftax ~20 mil FPS), sem
-  necessidade de um benchmark de velocidade dedicado.
-- **ProcGen easy/hard**: não reproduzível no Craftax Classic → removido (documentado na seção 2).
-- **Figuras**: `figures/` é regenerado pelos próprios scripts a partir dos números reais. As
-  figuras antigas (dados fabricados) são sobrescritas conforme a Fase 2 conclui cada experimento.
-- **Fase 2**: ✅ **concluída** — os 10 experimentos terminaram e as tabelas da seção 3 estão
-  preenchidas com os números reais de `results/*.json` + `figures/`.
+Todos os gráficos e vídeos estão versionados na pasta `results/`.
+
+### 4.1. Coinrun 50k — CNN vs MLP (com/sem visão)
+![Coinrun 50k — CNN vs MLP](results/coinrun_50k_cnn_vs_mlp.png)
+
+### 4.2. Bossfight 100k — World Models
+![Bossfight 100k — World Models](results/bossfight_100k_world_models.png)
+
+### 4.3. Suite 100k — 3 Jogos × 11 Arquiteturas
+| Bossfight | Starpilot | Dodgeball |
+|---|---|---|
+| ![Suite Bossfight](results/suite_bossfight.png) | ![Suite Starpilot](results/suite_starpilot.png) | ![Suite Dodgeball](results/suite_dodgeball.png) |
+
+### 4.4. Bossfight HARD 100k — Stress Test
+![Bossfight HARD 100k](results/bossfight_hard_100k.png)
+
+### 4.5. New Archs 100k — 5 Novas Arquiteturas ×3 Jogos
+![New Archs Bossfight](results/new_archs_bossfight.png) | ![New Archs Starpilot](results/new_archs_starpilot.png) | ![New Archs Dodgeball](results/new_archs_dodgeball.png)
+
+### 4.6. Maze+Heist 100k — PPO vs ICM/RND/NGU
+![Maze](results/maze_heist_maze_plot.png) | ![Heist](results/maze_heist_heist_plot.png)
+
+### 4.7. Global 16 — Média 3 Jogos
+![Global 16](results/global_16.png)
+
+### 4.8. Vídeos
+
+Vídeos lado-a-lado são gerados sob demanda (`visualize_side_by_side.py`) — bossfight com **sonhos** (`top=real`, `bottom=dream()` de `VAE/AE/Recon`; Contrastive exibe `no dream`) e coinrun com agentes lado-a-lado. Requer os `.zip` salvos pelos benchmarks durante o treino:
+  ```powershell
+  py -3.10 visualize_side_by_side.py --benchmark world_models --game bossfight --log_dir ./logs_world_models --mode mp4 --out results/bossfight_dreams.mp4 --steps 600 --device cuda
+  py -3.10 visualize_side_by_side.py --benchmark procgen --game coinrun --log_dir ./logs_procgen --mode mp4 --out results/coinrun_side_by_side.mp4 --steps 600 --device cuda
+  ```
+- **Curvas de treino por seed:** `statistics.json` + `comparison_results.json` por benchmark + `tensorboard --logdir logs_suite` (logs tensorboard são descartáveis/gerados sob demanda).
 
 ---
 
-## 6. Guia de Execução & Reprodução
+## 5. Como Reproduzir
 
-```bash
-source /root/jax-gpu/bin/activate
-cd /mnt/c/Users/Acer/Downloads/MLE
+```powershell
+# Ambiente (Python 3.10 obrigatório para Procgen) — versões pinadas em requirements.txt
+pip install -r requirements.txt
 
-# Smoke test (valida 1 passo de gradiente real de cada trainer)
-python3 run_smoke_test.py
+# ou manualmente (mesmas versões validadas):
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -m pip install procgen==0.10.7 stable-baselines3==2.9.0 gymnasium==1.3.0 gym==0.26.2 torch==2.5.1+cu121 opencv-python==4.8.0.74 --extra-index-url https://download.pytorch.org/whl/cu121
 
-# Convergência completa (sequencial, 1 processo por vez na GPU)
-bash run_convergence_phase1.sh   # HRL, MARL, Tríade
-bash run_convergence_phase2.sh   # Algos, Discreto/Contínuo, MARL-4, 3D, Boxe, pixels...
-
-# Experimentos individuais (orçamento configurável; --help)
-python3 experiments/compare_algos.py         --steps 8000000 --num-envs 256 --seeds 0 1 2
-python3 experiments/compare_hrl.py           --steps 8000000 --num-envs 256 --seeds 0 1 2
-python3 experiments/compare_marl.py          --steps 2000000 --num-envs 128 --seeds 0 1 2
-python3 experiments/compare_3d_benchmarks.py --brax-steps 2000000 --marl-steps 3000000 --num-envs 64
-python3 experiments/run_boxing_grand_prix.py --teacher-steps 1000000 --offline-steps 40000 --dataset-size 200000
+# Benchmarks 5 seeds
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_world_models.py --timesteps 100000 --seeds 42 43 44 45 46 --num_levels 200 --log_dir ./logs_world_models --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_procgen.py --game coinrun --timesteps 50000 --seeds 42 43 44 45 46 --num_levels 200 --log_dir ./logs_procgen --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_suite.py --games bossfight starpilot dodgeball --timesteps 100000 --seeds 42 43 44 45 46 --log_dir ./logs_suite --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_bossfight_hard.py --timesteps 100000 --seeds 42 43 44 45 46 --log_dir ./logs_bossfight_hard --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_new_archs.py --timesteps 100000 --seeds 42 43 44 45 46 --games bossfight starpilot dodgeball --log_dir ./logs_new_archs --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_maze_heist.py --timesteps 100000 --seeds 42 43 44 45 46 --games maze heist --log_dir ./logs_maze_heist --device cuda
+C:\Users\Acer\AppData\Local\Programs\Python\Python310\python.exe -u compare_combined.py  # agrega logs_suite + logs_new_archs no ranking global
+py -3.10 -u re_eval_scorecard.py --device cuda  # re-eval 30 eps stoch+det dos 115 zips (sem retreino)
+py -3.10 -u compare_suite_retrain.py --device cuda  # retreino da suite com protocolo novo (resume-safe)
+py -3.10 scorecard_analysis.py  # IC 95% + Cohen's d + AUC -> results/scorecard.json
+py -3.10 retrain_analysis.py  # análise do retreino + ranking global novo -> results/retrain_analysis.json
+py -3.10 -u re_eval_100.py --device cuda  # protocolo definitivo: 100 eps em todos os 275 zips
+py -3.10 eval100_analysis.py  # comparação 30 vs 100 -> results/eval100_analysis.json
+py -3.10 probe_actions.py  # sondagem do espaço de ações (base das skills do HRL)
+py -3.10 -u compare_hrl.py --device cuda  # benchmark independente HRL vs Flat (jumper/plunder)
+py -3.10 -u compare_hrl_learned.py --device cuda  # braço hrl_learned (RODAR APÓS compare_hrl.py: ambos escrevem em results/hrl_results.json)
+py -3.10 hrl_analysis.py  # análise dos 4 braços -> results/hrl_analysis.json
+py -3.10 -u compare_budget_scaling.py --device cuda  # budget scaling 250k/500k (resume-safe)
+py -3.10 budget_analysis.py  # curvas 100k->250k->500k -> results/budget_analysis.json
+py -3.10 -u compare_algo_families.py --device cuda  # value vs policy-based (seção 12; requer sb3-contrib)
+py -3.10 algo_analysis.py  # análise por família/algoritmo -> results/algo_families_analysis.json
+py -3.10 -u lr_sensitivity.py --device cuda  # teste de sensibilidade de lr dos value-based (seção 12.2)
 ```
 
-Cada script aceita `--steps/--num-envs/--seeds` e salva incrementalmente em `results/`.
-Logs de convergência em `results/logs/`.
+**Estimativas `cuda`:** `coinrun 50k` `5×50k` `~35 min`, `bossfight 100k` `5×100k` `~67 min`, `suite 100k` `3 jogos ×11×5×100k` `16.5M steps` `~15h` (`20:41→04:47`), `bossfight hard` `~2.5h`, `new archs 100k` `3 jogos ×5×5×100k` `7.5M steps` `~12h` (`13:45→01:39`), `maze+heist 100k` `2 jogos ×4×5×100k` `4M steps` `~6.5h` (`01:48→08:23`), `combined` imediato, `re-eval 115 zips` `~70 min`, `suite retrain 165 modelos` `~28h` (`bossfight ~10 min/modelo`, `dodgeball ~3 min/modelo`), `re-eval 100 eps 275 zips` `~5h`.
 
 ---
 
-## 7. Política de Autenticidade
+## 6. Próximos Benchmarks Propostos
 
-- Todo número reportado provém de **treino por gradiente** + **avaliação episódica real**.
-- Se um resultado não pôde ser medido honestamente, ele é **removido e documentado**, jamais inventado.
-- Desvios-padrão refletem variância **real** entre seeds/episódios, não valores decorativos.
-- O histórico anterior (ProcGen/PyTorch e a versão com números fabricados) permanece no Git para auditoria.
+> **Nota:** os caminhos `D:\mario-ds`, `D:\mujoco-walker`, `D:\Imitation-player` e `D:\mario64ds-rl` são **repositórios externos de referência** fora deste projeto — não são necessários para reproduzir os benchmarks acima.
+
+| # | Origem | Benchmark em `Procgen` `RL` (não só `loss` como `Imitation-player:171`) | Tempo |
+|---|---|---|---|
+| 1 | `mujoco-walker:50` | **Offline RL** `100k` `bossfight` `expert` `BC` vs `IQL` vs `CQL` vs `Decision Transformer` | `~40 min` offline |
+
+### 6.1. Roadmap de Instrumentação — 6 Melhorias Priorizadas
+
+O próximo salto não é adicionar arquiteturas, e sim instrumentar melhor as que já foram testadas (ver análise crítica externa). Prioridade por `custo × valor`:
+
+| # | Sugestão | Status | Detalhes |
+|---:|---|---|---|
+| 1 | **50–100 episódios de eval** | ✅ concluído (`re_eval_scorecard.py`: `115/115` modelos, `30 eps`) | `n_eval_episodes=10` era pouco — rankings mudaram (seção 3.10); modelos dos benchmarks antigos foram deletados, então só os `115` zips sobreviventes eram re-avaliáveis |
+| 2 | **Eval duplo: `deterministic=True` + `False`** | ✅ concluído (mesmo script, colunas `stoch`/`det` na seção 3.10) | confirmar o aviso da seção 1.3: modo determinístico colapsa políticas estocásticas (`maze` `2.47→0.60`) — reportar ambos |
+| 3 | **Intervalos de confiança + effect size** | ✅ concluído (`scorecard_analysis.py` → seção 3.8) | com `n=5 seeds`, diferenças pequenas não suportam conclusão de superioridade; `IC 95%` (`t` de Student) e `Cohen's d` por par em `results/scorecard.json` |
+| 4 | **Scorecard: robustez + sample efficiency (AUC)** | ✅ AUC concluído (seção 3.9); robustez = std já existente | `AUC(reward, env_steps)` das curvas `tensorboard` de `new_archs`/`maze_heist`; pergunta muda de "quem ganhou" para "quem aprende mais rápido"; **não requereu retreino** |
+| 5 | **Scorecard: generalization gap** | ✅ concluído (item 1, sem retreino) | `gap = train(200 níveis, seed treino) − unseen`; ≈ `0`/negativo na maioria → sem memorização (seção 3.10) |
+| 6 | **Budget scaling `100k→250k→500k`** | ✅ concluído (`compare_budget_scaling.py` → seção 3.13) | `24 jobs` (`250k+500k` × `resnet18+mlp_vector` × `starpilot+dodgeball` × `3 seeds`); veredito: **curvas estagnam — mais budget não era necessário** |
+
+**Scorecard final** (4 eixos preenchidos — `Performance` = re-eval `30 eps stoch`, `AUC` seção 3.9, `Generalização` = gen gap seção 3.10, `Robustez` = ±std entre seeds; ordenado por Performance):
+
+| Modelo | 🧠 Performance | ⚡ AUC | 🌎 Gap | 🎲 Robustez |
+|---|---:|---:|---:|---:|
+| `bossfight_resnet18` | **0.39** | 0.107 | −0.12 | ±0.50 |
+| `bossfight_impala` | 0.33 | 0.141 | −0.10 | ±0.27 |
+| `bossfight_lstm_attention` | 0.32 | **0.247** | −0.20 | ±0.47 |
+| `bossfight_vit` | 0.29 | 0.064 | −0.27 | ±0.57 |
+| `bossfight_impoola` | 0.25 | 0.186 | −0.21 | ±0.47 |
+| `starpilot_lstm_attention` | **2.63** | 2.284 | +0.15 | **±0.44** |
+| `starpilot_resnet18` | 2.53 | 2.325 | −0.51 | ±0.36 |
+| `starpilot_impoola` | 2.44 | 2.230 | −0.19 | ±0.68 |
+| `starpilot_impala` | 2.00 | **2.336** | +0.31 | ±0.45 |
+| `starpilot_vit` | 1.88 | 2.297 | −0.07 | ±0.68 |
+| `dodgeball_resnet18` | **1.07** | **1.175** | +0.27 | ±0.40 |
+| `dodgeball_impoola` | 1.05 | 1.151 | −0.07 | ±0.31 |
+| `dodgeball_impala` | 1.04 | 1.169 | −0.11 | **±0.20** |
+| `dodgeball_lstm_attention` | 0.99 | 1.114 | +0.24 | ±0.23 |
+| `dodgeball_vit` | 0.91 | 1.032 | −0.21 | ±0.35 |
+| `maze_icm` | **2.80** | 3.658 | +0.80 | ±0.98 |
+| `maze_ppo`=`rnd`=`ngu` | 2.47 | **3.785** | +0.73 | ±1.17 |
+| `heist_icm` | **0.73** | 1.792 | −0.47 | ±0.71 |
+| `heist_ppo`=`rnd`=`ngu` | 0.67 | **1.826** | 0.00 | ±0.73 |
+
+**Scorecard — suite retrain** (seção 3.11; Performance = média dos 3 jogos; `AUC` indisponível — logs TB antigos deletados; `aug_noise` ≡ `wm_contrastive`, ver nota):
+
+| Modelo | 🧠 Performance | ⚡ AUC | 🌎 Gap | 🎲 Robustez |
+|---|---:|---:|---:|---:|
+| `cnn_mlp_vector` | **1.36** | — | −0.01 | ±0.41 |
+| `cnn_spatial` | 1.35 | — | −0.02 | ±0.38 |
+| `aug_crop` | 1.31 | — | −0.17 | ±0.44 |
+| `cnn_cbam` | 1.24 | — | −0.26 | ±0.54 |
+| `cnn_classic` | 1.16 | — | −0.16 | ±0.46 |
+| `wm_ae` | 1.13 | — | −0.02 | **±0.23** |
+| `wm_recon` | 1.05 | — | −0.25 | ±0.33 |
+| `wm_contrastive`=`aug_noise` | 1.04 | — | −0.14 | ±0.52 |
+| `aug_color` | 1.02 | — | −0.06 | ±0.48 |
+| `wm_vae` | 0.92 | — | +0.11 | ±0.32 (n=2–3) |
+> Nota: `ContrastiveNoise` herda `ContrastiveExtractor` sem alterar o `forward` (`compare_augment_contrastive.py:42`) — com mesmos seeds, é um duplicado exato do `wm_contrastive` (resultados idênticos nos 3 jogos). Ler como `9` configs independentes, não `11`.
+> Leitura cruzada (dados unificados, `275` modelos no protocolo novo): **global top-4: `mlp_vector 1.36` > `spatial 1.35` > `lstm_attention 1.34` > `aug_crop 1.31`** — todos estatisticamente indistinguíveis (seção 3.8). `starpilot_lstm_attention` segue único líder dos 4 eixos num jogo só; agora empatado em Performance com `cnn_spatial` (`2.63`). `resnet18` perde o topo de `dodgeball` para `cnn_mlp_vector` (`1.21` vs `1.07`). `ICM` lidera `maze`/`heist` mas perde AUC. Gap ≈ `0`/negativo na maioria — sem memorização (exceção: `maze` `+0.7~+0.8`).
+> 📌 **Nota:** os valores acima são do protocolo de `30 eps`; o protocolo definitivo de `100 eps` (seção 3.12) consolida `mlp_vector` no topo (`1.43`), devolve `resnet18` ao topo de `dodgeball` e empata `ICM` com `PPO` em `maze`/`heist`.
+
+---
+
+## 7. Resultados por Seed (Completo) — 5 Seeds `42-46`, 10 Eps `deterministic=False`
+
+**Coinrun 50k 5 seeds** `logs_procgen/comparison_coinrun_20260827_204023/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `classic` | 7.0 | 6.0 | 7.0 | 9.0 | 9.0 | **7.6±1.2** |
+| `cbam` | 8.0 | 8.0 | 8.0 | 8.0 | 8.0 | **8.0±0.0** |
+| `spatial` | 6.0 | 0.0 | 7.0 | 9.0 | 9.0 | **6.2±3.31** |
+| `mlp_vector` | 7.0 | 7.0 | 8.0 | 9.0 | 9.0 | **8.0±0.89** |
+
+**Bossfight 100k 5 seeds (World Models)** `logs_world_models/comparison_bossfight_20260827_193327/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `vae` | 0.0 | 0.0 | 0.1 | 0.4 | 0.4 | 0.16±0.16 |
+| `ae` | 0.0 | 0.0 | 0.1 | 0.1 | 1.3 | 0.30±0.50 |
+| `recon` | 0.0 | 0.0 | 0.0 | 0.0 | 0.1 | 0.02±0.04 |
+| `contrastive` | 0.0 | 0.0 | 0.0 | 0.2 | 1.6 | **0.36±0.62** |
+
+**Bossfight HARD 100k 5 seeds** `logs_bossfight_hard/comparison_bossfight_hard_20260828_072148/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `vae` | 0.0 | 0.0 | 0.4 | 1.2 | 0.6 | **0.43±0.54** |
+| `ae` | 0.1 | 0.1 | 0.4 | 0.1 | 1.2 | 0.38±0.41 |
+| `recon` | 0.0 | 0.0 | 0.0 | 0.0 | 0.0 | 0.0±0.0 |
+| `contrastive` | 0.0 | 0.0 | 0.0 | 0.0 | 0.3 | 0.06±0.12 |
+| `classic` | 0.0 | 0.0 | 0.0 | 0.0 | 0.1 | 0.02±0.04 |
+| `cbam` | 0.0 | 0.0 | 0.0 | 0.0 | 0.1 | 0.02±0.04 |
+| `spatial` | 0.0 | 0.0 | 0.0 | 0.0 | 0.1 | 0.02±0.04 |
+| `mlp` | 0.0 | 0.0 | 0.0 | 0.1 | 1.2 | 0.26±0.47 |
+| `aug_crop` | 0.0 | 0.0 | 0.0 | 0.3 | 1.3 | 0.32±0.49 |
+| `aug_color` | 0.0 | 0.0 | 0.0 | 0.0 | 0.1 | 0.02±0.04 |
+| `aug_noise` | 0.0 | 0.0 | 0.0 | 0.0 | 0.3 | 0.06±0.12 |
+
+**Suite 100k 3 Jogos (11 configs×3×5=165 entradas)** `logs_suite/suite_bossfight_starpilot_dodgeball_20260827_204109/suite_results.json:1` — `mean` em `suite_statistics.json:1`; ex `starpilot spatial: [1.6,2.1,2.2,3.2,3.5] 2.6±0.82`, `dodgeball classic: [0.8,1.0,1.4,1.5,2.7] 1.48±0.69`. Full `165` linhas preservadas em `suite_results.json` para `LaTeX`.
+
+**New Archs 100k 3 Jogos (5×3×5=75 entradas)** `logs_new_archs/new_archs_bossfight_starpilot_dodgeball_20260828_134545/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `bossfight_impala` | 0.0 | 0.2 | 0.0 | 0.0 | 1.2 | 0.28±0.47 |
+| `starpilot_lstm_attention` | 2.3 | 2.9 | 1.4 | 2.7 | 2.9 | **2.44±0.56** |
+| `dodgeball_resnet18` | 1.2 | 1.6 | 1.4 | 3.0 | 1.4 | **1.72±0.65** |
+
+**Maze+Heist 100k 2 Jogos (4×2×5=40 entradas)** `logs_maze_heist/maze_heist_maze_heist_20260829_014802/comparison_results.json:1`
+| Config | 42 | 43 | 44 | 45 | 46 | Mean±Std |
+|---|---:|---:|---:|---:|---:|---|
+| `maze_ppo` | 2.0 | 3.0 | 1.0 | 1.0 | 5.0 | **2.4±1.50** |
+| `maze_icm` | 0.0 | 1.0 | 1.0 | 3.0 | 4.0 | 1.8±1.46 |
+| `heist_ppo` | 0.0 | 0.0 | 1.0 | 1.0 | 2.0 | **0.8±0.74** |
+| `heist_icm` | 1.0 | 0.0 | 0.0 | 0.0 | 2.0 | 0.6±0.80 |
+
+## 8. Vídeos
+
+Gerados sob demanda via `visualize_side_by_side.py` (comandos na seção 4.8): `bossfight_dreams.mp4` (World Models com sonhos) e `coinrun_side_by_side.mp4` (CNN vs MLP lado-a-lado). Saída `mp4` com painéis `128×128` por agente `hstack` `15 FPS`; `dream` para `VAE/AE/Recon` (`models/world_model_extractors.py:6` `dream()` `deconv`), `Contrastive` exibe `no dream`. Requer os `.zip` salvos durante o treino dos benchmarks.
+
+## 9. Hardware e Limitações
+
+- **Hardware:** `NVIDIA GeForce RTX 4070 Laptop` `556.29` `CUDA 12.5` `WDDM` `8 GB VRAM` `58°C` `~30%` `GPU-Util` durante `PPO` `cuda` (`nvidia-smi` `20:41`), `Python 3.10.11` `torch 2.5.1+cu121` `gym 0.26.2` `gymnasium 1.3.0` `stable-baselines3 2.9.0`.
+- **Limitações:** `bossfight 100k` `easy` já `<1.0` (`0.76±0.90`) e `hard` `0.02±0.04` zeram `CNN` — `suite 100k` `16.5M steps` é `mínimo` para `ranking`; `ViT` medido no `benchmark #6`: `~4.6 min/run` em `bossfight` mas `16-25 min/run` em `starpilot` (`~4×` mais lento que `CNN`, variável por jogo) — a estimativa antiga de `~15×` (`Imitation-player:171`) era de `loss` imitation, não de `PPO`; ainda assim `ViT 1.20` global não supera `lstm/spatial`; `Imitation BC` só viu `loss` (`ResNet 2.90` melhor) sem `reward` `RL` — `#4` corrige isso.
+
+## 10. Referências
+
+- `Procgen` (`Cobbe et al.`), `DreamerV3` (`SheepRL`), `CURL`/`SPR` (`mario-ds:121`), `CBAM` (`Woo et al.`), `PPO` (`Schulman`), `Stable-Baselines3`, `Imitation-player` `compare_models.py` `Nature 3.48` vs `ResNet 2.90`.
+
+---
+
+## 11. Benchmark Independente — HRL vs Flat RL (`jumper`/`plunder`)
+
+> ⚠️ **Separado do estudo principal:** não entra no scorecard das seções 3.x/6.1; logs/resultados próprios (`logs_hrl/`, `results/hrl_results.json`).
+
+**Pergunta:** hierarquia ajuda em `100k` frames? Quatro braços com **mesmo budget de `100k` frames primitivos**, `PPO` idêntico (`lr 3e-4`, `NatureCNN`, mesmos hiperparâmetros do estudo):
+
+| Braço | Descrição | Decisões treinadas |
+|---|---|---:|
+| `flat` | PPO sobre as `15` ações primitivas | `100k` |
+| `skip4` | action-repeat `4` (controle: abstração temporal **sem** hierarquia) | `25k` |
+| `hrl` | PPO meta-controlador sobre `6` skills **fixas** × `4` frames (framework de opções, `compare_hrl.py:34`) | `25k` |
+| `hrl_learned` | hierarquia 2 níveis treinada em conjunto (`compare_hrl_learned.py`): meta escolhe `6` skills **latentes aprendidas** a cada `4` frames; low-level `π(a\|obs,z)` executa ações primitivas; especialização emergente (sem incentivo de diversidade) | `25k` meta + `100k` low |
+
+**Skills do braço `hrl`** (sondagem empírica `probe_actions.py` + mapeamento oficial de ações do `procgen/env.py`; `UP`=pulo em `jumper`, `D`=tiro em `plunder`): `wait`, `left`, `right`, `jump|shoot`, `jump_left|shoot_left`, `jump_right|shoot_right`.
+
+**Notas de comparabilidade:** `hrl_learned` recebe atualização por frame no low-level (sinal de gradiente comparável ao `flat`) e usa truncamento com bootstrap em `HORIZON=256` frames (episódios de `jumper` passam de `500`; sem o teto o meta quase não decidiria) — os demais braços usam episódios nativos. Modelo salvo como `.pt` (meta+low) em `logs_hrl/hrl_zips/`, não `.zip` SB3.
+
+**Protocolo:** `2 jogos × 4 braços × 5 seeds` = `40 runs` (`30` do `compare_hrl.py` + `10` do `compare_hrl_learned.py`, sequencial); treino `num_levels=200` `easy`; eval definitivo `100 eps` stoch + `100 det` (unseen `seed+1000`) + `15 eps` train. Dados em `results/hrl_results.json`, análise em `results/hrl_analysis.json` (`hrl_analysis.py`).
+
+### 11.1. Resultados (concluído: `40/40`, `0 erros`)
+
+| Braço | `jumper` stoch | `jumper` det | `plunder` stoch | `plunder` det |
+|---|---:|---:|---:|---:|
+| `flat` | 0.90±0.49 | 0.38 | 3.53±0.45 | 0.61 |
+| `skip4` | **3.76±0.48** | 0.38 | 3.36±0.28 | 1.32 |
+| `hrl` (fixo) | 3.72±0.86 | 0.66 | 3.24±0.14 | 0.85 |
+| `hrl_learned` | 2.96±0.45 | 0.44 | **4.16±0.33** | **2.70** |
+
+> **4 achados:** (1) **`jumper`: o ganho é de abstração temporal, não de hierarquia** — `skip4`≈`hrl` (`3.7`) dão `4×` o `flat` (`0.90`); segurar direção/pulo por `4` frames é o que destrava o jogo, e a biblioteca de skills não adicionou nada além do action-repeat. (2) **`hrl_learned` fica entre o `flat` e os braços com abstração em `jumper`** (`2.96`) — co-treinar meta+low precisa de mais budget para alcançar skills pré-projetadas. (3) **`plunder`: `hrl_learned` é o único braço que ganha** (`4.16` vs `3.53` do `flat`, menor std `0.33`) — a macro fixa de segurar o tiro `4` frames não serve ao timing de tiro, mas a skill aprendida se adapta; os braços fixos empatam com o `flat`. (4) **modo determinístico:** colapsa todos os braços em `jumper` (`0.38–0.66`, política estocástica é essencial), mas em `plunder` o `hrl_learned` destoa (`det 2.70` vs `≤1.32`) — a hierarquia aprendida produz política mais explorável deterministicamente. Gen gap `plunder hrl_learned` `+0.97` (único relevante).
+
+---
+
+## 12. Benchmark Independente — Value-based vs Policy-based (`starpilot`/`dodgeball`/`bossfight`)
+
+> ⚠️ **Separado do estudo principal** (que comparou *arquiteturas* com `PPO` fixo): aqui a variável é a **família do algoritmo**. Logs/resultados próprios (`logs_algo/`, `results/algo_families_results.json`).
+
+**Pergunta:** em `100k` steps com imagens, gradient de política (on-policy) supera bootstrapping de valor (off-policy)?
+
+| Família | Algoritmos | Característica |
+|---|---|---|
+| **Policy-based** | `PPO` (hiperparâmetros do estudo), `A2C` (default SB3, `lr 3e-4`) | on-policy, `100k` decisões efetivas de update |
+| **Value-based** | `DQN`, `QR-DQN` (`sb3-contrib`, distribucional `200 quantiles`) | off-policy, replay buffer |
+
+**Fairness:** arquitetura idêntica para todos (`CnnPolicy`/`NatureCNN` `512D`); `3 jogos × 4 algos × 5 seeds = 60 runs`; eval definitivo (`100 eps` stoch + `100 det` unseen `seed+1000` + `15 train`).
+
+**Adaptações documentadas dos value-based para budget pequeno** (`compare_algo_families.py:32`): `buffer_size=100k` (default `1M` não cabe em RAM com imagens), `learning_starts=5000` e `exploration_fraction=0.25` (defaults Atari de `50k`/`10%` consomem metade/ignoram o budget), `lr=1e-4` (default do DQN; `3e-4` desestabiliza o TD-error), `train_freq=4`, `gradient_steps=1`, `target_update_interval=500`, `batch=64`.
+
+> ⚠️ **Limitação de fairness (critério adotado):** a comparação usa *best practice por algoritmo* (`lr 3e-4` policy vs `lr 1e-4` value), não *configuração idêntica*. O critério idêntico (`3e-4` para todos) arriscaria medir "DQN com lr errado diverge" em vez de "família value é pior". Como não houve sweep de lr, a conclusão é condicionada aos defaults — o **teste de sensibilidade** `lr_sensitivity.py` (seção 12.2: `dqn`/`qrdqn` a `3e-4` em `starpilot`, o jogo do maior gap, `10 runs`) verifica se a diferença de lr explica o resultado. **Resultado do teste (seção 12.2): não explica** — `dqn 0.65→0.66`, `qrdqn 1.04→1.25` (dentro do ruído).
+
+**Status:** concluído (`60/60`, `0 erros`, `~9h` `01/09 20:09→02/09 05:12`). Dados em `results/algo_families_results.json`, análise em `results/algo_families_analysis.json` (`algo_analysis.py`).
+
+### 12.1. Resultados (stoch unseen `100 eps`, média±std de `5 seeds`)
+
+| Jogo | `ppo` | `a2c` | `dqn` | `qrdqn` |
+|---|---:|---:|---:|---:|
+| `starpilot` | 2.29±0.47 | **2.38±0.29** | 0.65±0.37 | 1.04±0.26 |
+| `dodgeball` | 0.65±0.36 | **0.89±0.10** | 0.18±0.09 | 0.61±0.49 |
+| `bossfight` | 0.18±0.29 | 0.05±0.06 | 0.03±0.05 | **0.28±0.50** |
+| **Família (média 3 jogos)** | `policy` **1.07** | | `value` 0.47 | |
+
+> **4 achados:** (1) **Policy-based vence a família** (`1.07` vs `0.47`, `2.3×`) — em `100k` steps com imagens, on-policy supera bootstrapping de valor, confirmando a hipótese do regime low-data (seção 1.4). (2) **QR-DQN encurta muito a distância** (`+60%` sobre `DQN` em `starpilot`: `1.04` vs `0.65`) e em `bossfight` (sparse/ruído alto) **é o único algoritmo que lidera** (`0.28` vs `ppo 0.18`) — RL distribucional se beneficia exatamente onde a incerteza é alta. (3) **`A2C` ≈ ou > `PPO` em `starpilot`/`dodgeball`** (`2.38/0.89` vs `2.29/0.65`), mas **colapsa em `bossfight`** (`0.05` vs `0.18`) — sem clipping, um outlier de gradiente no jogo sparse destrói a política; o clipping do `PPO` vale seu custo onde a estabilidade importa. (4) **Gen gap `≈0` em todos** os `12` braços — nenhuma família memoriza níveis de treino (consistente com as seções 3.10/3.13). Nota de contexto: os valores diferem dos da seção 3.12 porque aqui o extrator é `NatureCNN` padrão para todos (o estudo principal usou extratores custom) — comparação válida *dentro* desta tabela.
+
+### 12.2. Teste de Sensibilidade de `lr` — a conclusão depende do `1e-4`? (`lr_sensitivity.py`, concluído `10/10`)
+
+`dqn`/`qrdqn` re-treinados a `3e-4` (o lr do PPO/A2C) em `starpilot` (jogo do maior gap), `5 seeds`, protocolo idêntico. Dados em `results/lr_sensitivity_results.json`:
+
+| Algoritmo | `lr 1e-4` (seção 12.1) | `lr 3e-4` | Δ | Referência policy |
+|---|---:|---:|---:|---:|
+| `dqn` | 0.65±0.37 | 0.66±0.44 | **+0.01 (empate)** | `ppo 2.29` / `a2c 2.38` |
+| `qrdqn` | 1.04±0.26 | 1.25±0.37 | +0.21 (dentro do ruído) | idem |
+> **Veredito:** triplicar o lr dos value-based **não muda a conclusão**. `DQN` fica idêntico (`0.65→0.66`); `QR-DQN` sobe `+0.21`, abaixo do ruído entre seeds (`SE` da diferença `≈0.20` com `n=5`) — tendência leve, não significativa. Ambos seguem `~2×` abaixo do PPO/A2C (`2.29/2.38`). A limitação de fairness da seção 12 fica assim **resolvida empiricamente**: o gap policy-vs-value em `100k` não é artefato da escolha de lr (pelo menos em `starpilot`, o jogo testado).
+
+---
+
+## 13. Nota de Restauração e Escopo (04/09/2026) — por que este README voltou
+
+### 13.1. O que aconteceu
+
+Este repositório passou por três fases distintas, preservadas no histórico Git para auditoria:
+
+1. **Fase ProcGen/SB3 (este estudo, commit `4f84ed3`).** Benchmark sistemático em `ProcGen` real com `Stable-Baselines3`/`PyTorch` — seções 1–12 acima. É o corpo científico deste projeto.
+2. **Fase JAX/Craftax/Brax/MARL (commits `5e88c16`–`6d450fa`).** Reescrita integral para `JAX`/`Flax`/`Optax` com `Craftax`, `Brax`, `MPE`, boxe offline e grade combinatória. Protocolos, budgets, métricas e ambientes **diferentes** do estudo ProcGen (ex.: retorno episódico Craftax simbólico vs. reward ProcGen pixels; `8M` steps vs. `100k`; FPS medidos em workloads distintos).
+3. **Fase porte JAX-do-ProcGen (set/2026, fora do Git principal).** Tentativa de reconstruir o estudo **exato** em `JAX` para obter o mesmo desenho experimental com ~`10x` mais velocidade (detalhes na seção 14).
+
+Em `04/09/2026`, por decisão explícita do autor, **todo o conteúdo das fases 2–3 foi removido da árvore de trabalho** e o projeto foi **restaurado ao estado exato do commit `4f84ed3`** (`RL-Experiments-Lab@4f84ed3`, espelhado aqui como `MLE@4f84ed3`). As seções 1–12 acima são, portanto, **byte-a-byte o README do estudo ProcGen original** — nenhum número, tabela ou conclusão foi alterado nesta restauração.
+
+### 13.2. Justificativa acadêmica da remoção
+
+A remoção não é perda de trabalho, e sim controle de validade interna:
+
+- **Validade de construto.** Misturar no mesmo `README`/`results/` dois benchmarks com semânticas de reward, horizontes e budgets distintos (`Craftax 8M` vs. `ProcGen 100k`) convida à comparação inválida entre números incomensuráveis. A literatura de generalização em RL (Cobbe et al., ProcGen) exige protocolo fixo por estudo.
+- **Reprodutibilidade.** O estudo ProcGen depende de `Python ≤3.10` + `procgen 0.10.7` + `gym 0.26.2` + `torch cu121` (seção 5 e `requirements.txt`), enquanto a suíte JAX exigia `Python 3.12` + `jax 0.11` + `craftax`/`brax`. Manter ambos no mesmo venv/requirements quebra a instalação nos dois lados (o conflito `numpy<2` vs. `numpy 2.x` da seção 14.3 é o exemplo mínimo).
+- **Rastreabilidade.** Todo o material removido permanece recuperável no Git (`git log --oneline`, `git show 5e88c16:...`, `git show 6d450fa:...`). Nada foi reescrito da história; apenas a árvore de trabalho voltou ao escopo do estudo.
+
+### 13.3. O que foi apagado e o que foi restaurado
+
+**Apagado da árvore (permanence no Git):** `src/` (trainers JAX: `ppo.py`, `dqn.py`, `marl_*`, `continuous_rl.py`, `offline_rl.py`, `recurrent_ppo.py`, `eval_utils.py`, `procgen_parity_modules.py`, `procgen_env.py`, `procgen_ppo.py`), `experiments/` (12 benchmarks JAX/Craftax/Brax/MARL), `figures/` (9 figuras JAX), `results/` JAX (`*_benchmarks_results.json`, `boxing_*`, `dataset_boxing_expert.npz`, `procgen_parity_master_results.json`, `combinatorial_grid_results.json`, `results/logs/`, `boxing_final_results.txt`), scripts JAX (`run_all_procgen_combinations.py`, `run_combinatorial_grid.py`, `run_convergence_*.sh`, `run_full_benchmark.py`, `run_smoke_test.py`, `bench_*.py`, `smoke_procgen.py`, `diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`), caches (`.jax_compile_cache/`, `__pycache__/`).
+
+**Restaurado ao estado `4f84ed3`:** todos os `compare_*.py` na raiz, `models/` (`sb3_extractors.py`, `cnn_attention.py`, `cnn_classic.py`, `combined_extractors.py`, `world_model_extractors.py`), `procgen_wrapper.py`, `*_analysis.py`, `re_eval_*.py`, `visualize_*.py`, `requirements.txt` pinado (ProcGen), `.gitignore` original e `results/` originais (JSONs + PNGs das seções 3–12).
+
+### 13.4. O que as seções 14–16 acrescentam
+
+As seções 1–12 estão congeladas como registro do estudo concluído. As seções 14–16 são o **diário de bordo metodológico** exigido pelo autor: documentam, com o mesmo rigor das seções anteriores, **a trajetória, as escolhas, as mudanças e os ajustes** da tentativa de portar este estudo para JAX — incluindo o que funcionou (portão PA0 superado), o que foi removido da árvore e por quê, e qual é o caminho restante (PA1 em diante). Nenhum número das seções 1–12 é reinterpretado aqui; trata-se de metadocumentação do processo, não de novos resultados.
+
+---
+
+## 14. Trajetória do Porte JAX-do-ProcGen — objetivo, decisão e portão PA0
+
+### 14.1. Objetivo real e caminho escolhido (caminho A)
+
+O objetivo declarado não era "mais benchmarks em JAX", e sim **"o estudo do ProcGen, só que mais rápido"**. Diante das opções, o autor escolheu explicitamente o **caminho A — portar o estudo ProcGen fielmente para JAX**:
+
+> Reconstruir o estudo **exato** em JAX: ProcGen real (`envpool`/CPU) + **16 arquiteturas × 5 jogos × 5 seeds × 100k** + **IC 95% / Cohen's d / AUC / eval-duplo (stoch+det) / budget-scaling**. Ganho esperado de ~**10x** sobre o throughput SB3 (~`300 FPS` legado em `cuda`), sem alterar o desenho experimental.
+
+As alternativas rejeitadas foram: (B) manter a suíte JAX/Craftax como substituto do ProcGen — rejeitada porque Craftax simbólico/pixels e ProcGen pixels têm dinâmicas, espaços de observação e regimes de generalização distintos, de modo que "PPO ≫ DQN no Craftax" não responde "qual extrator generaliza melhor no ProcGen"; e (C) reimplementar ProcGen em JAX puro — rejeitada por ser inviável (o ProcGen é C++/OpenGL, com geração procedural proprietária; reescrevê-lo introduziria um novo ambiente, não uma aceleração do mesmo).
+
+O caminho A impunha, portanto, uma arquitetura híbrida inédita neste repositório: **pipeline CPU-env + learner JAX** — ambientes ProcGen vetorizados em CPU alimentando um learner PPO em JAX na GPU. Esse pipeline não existia aqui e constitui o trabalho novo central.
+
+### 14.2. Plano em fases e contenção de recursos
+
+Antes de qualquer código de learner, foi estabelecido um plano em fases com portões de viabilidade:
+
+- **PA0 (compatibilidade):** provar que `procgen 0.10.7` e `jax[cuda12]` coexistem e funcionam (env + GPU) num mesmo interpretador. Critério de passagem: `PROCGEN_JAX_OK` — abrir `coinrun` headless e executar uma op JAX em `cuda:0` no mesmo venv.
+- **PA1 (throughput):** construir o pipeline vetorizado CPU→GPU e medir FPS real contra os ~`300` do legado SB3.
+- **PA2+ (fidelidade):** reimplementar os 16 extratores e o protocolo completo (IC/Cohen/AUC/eval-duplo/budget-scaling) e validar paridade numérica num subconjunto antes da grade completa.
+
+Como pré-condição de PA0, a grade Craftax então em execução foi **parada com segurança** (JSON de resultados parciais preservado para retomada) a fim de liberar a GPU, e o ambiente foi diagnosticado com `diag_env.sh`. Essa contenção — um experimento por vez na GPU de 8 GB — replica a disciplina já adotada na suíte JAX (`run_convergence_phase*.sh`) e evita OOM por contenção de VRAM.
+
+### 14.3. Portão PA0 — diagnóstico, obstáculo, probe e superação
+
+**Diagnóstico (falha inicial, informativa).** O venv então ativo era `Python 3.12` + `JAX 0.11.1` + `cuda:0` funcional, mas `pip` não encontrava **nenhuma** versão do `procgen`: o `procgen 0.10.7` não publica wheel para `cp312`. O sistema possuía apenas `Python 3.12` (sem `3.10`/`3.9`, sem `conda`/`pyenv`), e o ProcGen exige `py≤3.10` por ser extensão C++ pré-compilada. Ferramentas de build presentes: `gcc`/`g++`/`make` (sem `cmake`) — compilar do fonte seria frágil e lento. Sem resolver isso, investir no learner JAX seria desperdício: daí o caráter de portão.
+
+**Probe de viabilidade (`probe_procgen.sh`).** Duas perguntas factuais foram respondidas antes de qualquer `apt`: (1) existe wheel `manylinux` de `procgen 0.10.7` para `cp310`? Sim — `procgen-0.10.7-cp310-cp310-manylinux...whl`, instalação limpa sem compilação; (2) há rede e meio de obter `Python 3.10` no `Ubuntu 24.04` (cujos repos oficiais não o trazem)? Sim, via PPA `deadsnakes`. Veredito: **VIÁVEL**.
+
+**Construção do ambiente (`setup_procgen_env.sh`, executado em background por envolver `apt` + ~2 GB de `jax[cuda12]`).** Caminho executado: `Python 3.10` (deadsnakes) + venv dedicado + `procgen` (wheel) + `jax[cuda12]`. Estágios 1–2 (interpretador + venv) concluídos rapidamente; o estágio longo foi o download/instalação do JAX CUDA. O primeiro `verify` falhou por dois motivos instrutivos, ambos corrigidos e documentados como ajustes:
+
+| # | Sintoma no `verify` | Causa-raiz | Ajuste adotado |
+|---|---|---|---|
+| 1 | Conflito `numpy`: `procgen` exige `numpy<2.0`, mas a instalação do JAX puxou `numpy 2.2.6` | Dependências divergentes (legado C++ pinado vs. ecossistema JAX recente) | Pinar `numpy==1.26.4` no venv do porte; o aviso residual de `ml-dtypes` é inofensivo (a op JAX de teste executou na GPU) |
+| 2 | `verify` inicial usou `gymnasium`, mas o ProcGen registra seus envs no `gym 0.26.2` (API antiga, `step` de 4-tupla) | O estudo original contorna isso com o wrapper `gym→gymnasium` (`procgen_wrapper.py`); o script de verificação tentou o registro direto no namespace errado | Corrigir o `verify` (`_verify_pg.py`) para a API `gym` legada; via nativa rápida adicional sondada em `_probe_pg3.py` (`gym3`) |
+
+**Validação (portão superado).** Após os ajustes, o critério `PROCGEN_JAX_OK` foi atingido no mesmo venv `py3.10`, headless, em WSL2: `coinrun` abre com obs `(64,64,3)` `uint8` e `Discrete(15)` (API `gym` de 4-tupla), e o JAX executa em `cuda:0`. Versões validadas do alicerce: `JAX 0.6.2` + `flax 0.10.7` + `optax 0.2.8` + `numpy 1.26.4` + `procgen 0.10.7`. Este é o estado sólido sobre o qual PA1 deveria ser construído — e é também o ponto em que a trajetória foi congelada pela decisão de restauração da seção 13.
+
+### 14.4. Tabela-resumo das escolhas e ajustes
+
+| Decisão / ajuste | Alternativa considerada | Critério e desfecho |
+|---|---|---|
+| Caminho A (porte fiel) vs. B (Craftax como substituto) vs. C (reimplementar ProcGen) | B era mais barato; C era "JAX puro" | Fidelidade ao desenho publicado venceu: só A responde a pergunta original sem trocar o ambiente |
+| Parar a grade Craftax antes de PA0 | Manter grade + setup em paralelo | GPU de 8 GB não comporta dois workloads; parada segura com JSON preservado |
+| `deadsnakes` + venv `py3.10` dedicado | Compilar ProcGen no `py3.12`, ou `conda`/`pyenv` | Wheel `cp310` existe e é limpo; compilar sem `cmake` era risco desnecessário; venv dedicado isola o conflito `numpy` sem contaminar o estudo SB3 |
+| Pinar `numpy 1.26.4` | Forçar `numpy 2.x` | Requisito rígido do ProcGen (`<2`); JAX opera normalmente sobre `1.26` neste escopo |
+| Verificar via `gym 0.26.2` (e sondar `gym3`) em vez de `gymnasium` direto | Padronizar tudo em `gymnasium` | O registro do ProcGen é `gym`-nativo; o estudo original já isola essa fronteira no wrapper — o porte deve respeitar a mesma fronteira |
+| Apagar o scaffolding JAX da árvore (seção 13) | Manter `setup_procgen_env.sh`/`_verify_pg.py`/pipeline parcial ao lado do estudo | Higiene de escopo e de instalação: o estudo SB3 volta a ser reproduzível com um único `requirements.txt`; o scaffolding permanece no Git e documentado aqui |
+
+---
+
+## 15. Estado Atual, Limites e Próximos Passos (PA1 em diante)
+
+**Estado atual (congelado).** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX está no estágio **PA0 superado, PA1 não iniciado**: existe prova de coexistência (env + GPU no mesmo venv), mas **não** existe ainda pipeline vetorizado CPU→GPU, medição de FPS próprio, reimplementação dos extratores em Flax, nem qualquer número JAX a reportar — e nenhum número JAX é reportado neste README, por princípio.
+
+**Próximo passo imediato (PA1).** Sondar o throughput do ProcGen vetorizado (via nativa `gym3`) e construir o loop mínimo CPU-env → learner JAX-GPU, medindo FPS real contra os ~`300` do legado. Só com ganho confirmado faz sentido investir na fidelidade (PA2+).
+
+**Riscos conhecidos para PA2+.** Paridade de pré-processamento (`HWC→CHW`, `uint8`, normalização, `frame_stack=1`), paridade de PPO (hiperparâmetros da seção 1.4 + GAE/clipping/minibatches idênticos), paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k`). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
+
+**Artefatos removidos, porém recuperáveis.** Os scripts do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`, `bench_throughput.py`, `src/procgen_env.py`, `src/procgen_ppo.py`) foram apagados da árvore por escopo, mas cada um é recuperável via `git show <commit>:<path>` e sua função está descrita na seção 14.3. Se o porte for retomado, recomenda-se recriá-los **fora** desta árvore (repositório ou branch dedicado `jax-port/`), preservando este diretório como registro imutável do estudo SB3.
+
+---
+
+## 16. Referências do Processo (além da seção 10)
+
+- Portão PA0 e ambiente: PPA `deadsnakes` (Python 3.10 no Ubuntu 24.04); wheel `procgen-0.10.7-cp310-cp310-manylinux`; `jax[cuda12]`; pinos `numpy==1.26.4`, `gym==0.26.2`, `flax==0.10.7`, `optax==0.2.8`, `JAX==0.6.2`.
+- Fronteira `gym`/`gymnasium`: `procgen_wrapper.py:6,55,85` (estudo original) como especificação da conversão a ser replicada no porte.
+- Disciplina de GPU: um processo por vez em VRAM de 8 GB; parada segura com save incremental em JSON (padrão já usado em `compare_suite_retrain.py` e nas grades JAX).
+- Hardware de referência de todo o estudo e do porte: `WSL2 Ubuntu 24.04`, `NVIDIA RTX 4070 Laptop 8 GB`, `cuda:0`, `Python 3.10.11` (estudo) / venv `py3.10` dedicado (porte).
