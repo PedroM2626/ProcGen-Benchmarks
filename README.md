@@ -629,7 +629,7 @@ Como pré-condição de PA0, a grade Craftax então em execução foi **parada c
 
 ## 15. Estado Atual, Limites e Próximos Passos (PA2-velocidade concluído; paridade em aberto)
 
-**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX, no mesmo branch `main` (diretório `jax_port/`, sem tocar nos arquivos do estudo), atingiu **PA0 + PA1 + PA2-velocidade**: treino PPO real com gradientes a **7–8,6k steps/s** — acima da meta de 3–5k (§15.2). Em aberto: paridade estatística com o estudo (grade multi-seed, IC/Cohen/AUC/eval-duplo/budget-scaling) e demais arquiteturas além da NatureCNN.
+**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX, no mesmo branch `main` (diretório `jax_port/`, sem tocar nos arquivos do estudo), cobre **todo o projeto**: zoo de 13 extratores, PPO/A2C, DQN/QR-DQN, ICM/RND/NGU, augments, HRL 4 braços, eval stoch+det+gap, stats (IC/Cohen/AUC) e grade runner — tudo testado (§15.4). Em aberto: *executar* a grade completa multi-seed (o código está pronto e testado; o custo estimado é ~2–4 h).
 
 ### 15.1. PA1 — pipeline e throughput medido (04/09/2026, venv `/root/procgen-jax`, WSL2, `coinrun`, ações aleatórias, 3000 steps)
 
@@ -653,7 +653,35 @@ Fonte: `jax_port/pa1_throughput.json`. Avisos `gym`/`np.bool8` durante o bench s
 
 > **Leitura honesta:** (1) o env cru escala pouco de 1→16 envs (12,6k→18,7k) — loop síncrono single-process em Python; multiprocesso/`gym3` é o ganho futuro. (2) O sync por step (`asarray` + JIT + `block_until_ready` a cada passo) domina o custo: com 1 env, o pipeline entrega ~`300 FPS`, indistinguível do baseline de treino SB3 (~`300 FPS`, seção 1.4) — mas aqui **sem nenhum update de rede**. (3) O batching amortiza o sync: 16 envs → ~`3k FPS` pré-learner, ou seja, ~`10x` de headroom sobre o legado **antes** do custo do PPO. A tese do caminho A continua de pé; o FPS de treino real com gradientes foi medido em seguida (§15.2) e superou estes 3k de pipeline.
 
-**Próximo passo (paridade PA2).** Grade multi-seed com o protocolo definitivo do estudo (eval `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e demais extratores em Flax; barra de aceitação inalterada: **reproduzir ordenação e barras de erro dentro do ruído entre-seeds**.
+**Próximo passo (executar a paridade).** Rodar `run_grade.py` nas 5 suítes com 5 seeds e `--eval-full`, e comparar ordenações com as seções 3–12 (barra: dentro do ruído entre-seeds). Estimativa: ~2–4 h de treino + eval (vs dias no SB3).
+
+### 15.4. Porte integral — mapa de cobertura e testes (05/09/2026)
+
+Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e teste real executado:
+
+| Estudo (seções 1–12) | Porte | Teste executado |
+|---|---|---|
+| Suite 16 arq (`compare_suite/new_archs/combined`, §3) | `backbones.py` (13 extratores) + `train.py --extractor` | zoo 13/13 shapes+params (§15.4.1); smoke-train 8/8; mini-grade 16 células OK |
+| `mlp_vector` (`procgen_wrapper.py:55`, §3.12) | modo `--obs vector` (luminância+mean-pool, sem cv2) | smoke-train OK; suite `test_smoke` usa este caminho |
+| Augments crop/color/noise (§3.3/3.11) | `augment.py` (p=0.5/float, fiel) + `--augment` | smoke crop e contrastive+noise OK |
+| ICM/RND/NGU (`compare_maze_heist.py:16`, §3.6) | `exploration.py` (beta=0.01, online/step, quirk do inverse documentada) | smoke maze-ICM/RND/NGU + heist-RND OK |
+| LSTM-Attention stateless (§3.5) | `LSTMAttention` (repeat-4+BiLSTM+MHA, fiel) | shape OK + smoke-train OK |
+| VAE/AE/Recon/Contrastive (§3.2) | `VAEBackbone` (reparam por forward) + gêmeos `ae`/`recon`≡classic + `contrastive`≡classic+noise (achado documentado) | smoke vae/ae/contrastive+noise OK |
+| PPO/A2C/DQN/QR-DQN (§12) | `train.py --algo`, `dqn.py`+`train_dqn.py` (buffer 100k, eps 1→0.05/25%, lr 1e-4, QR-200, `--lr` p/ sensibilidade) | smoke dqn/qrdqn/a2c OK |
+| HRL flat/skip4/hrl/hrl_learned (§11) | `train_hrl.py` (SKILLS exatas, DUR=4, budget em frames, low π(a\|obs,z)) | smoke 4/4 braços OK |
+| Eval 100+100+15, gap (§3.10–12) | `--eval-eps/--eval-det-eps/--eval-train-eps` + `gen_gap` nos 3 trainers | regressão PPO/DQN/HRL OK |
+| IC/Cohen/AUC (§3.8–3.9) | `stats.py` (t Student, d, trapézio/budget) | `test_stats` valores conhecidos OK |
+| Grades + budget scaling (§2–3.13) | `run_grade.py` (suites main/exploration/algo/hrl/budget, resume `master.json`) | mini-grade 26/26 OK (§15.4.1) |
+| Bench justo SB3-vs-JAX (§15.3) | `bench_sb3_paired.py` + `paired_*.json` | A/B/C medidos |
+
+#### 15.4.1. Evidência de teste (05/09/2026, `/root/procgen-jax`, RTX 4070)
+- `test_stats`: `STATS_OK` nos dois interpretadores (py3.10 Win + venv).
+- `test_parity`: gym3-batch == gym-unitário, 200 steps, 0 divergências (`PARITY_OK`).
+- `test_zoo`: 13/13 forwards + classic 608.944 params (~600k do estudo) + gêmeos idênticos (`ZOO_OK`).
+- `test_smoke`: treino MLP ponta-a-ponta em processo (`SMOKE_OK`).
+- Armadilhas achadas pelos testes e corrigidas: padding SAME default do Flax (virava 2,1M params; fix VALID), `stop_gradient` como context-manager, `main()` do DQN sem chamar `train()`, gather-no-device 40x, `np.trapezoid` inexistente no numpy 1.26.
+- Mini-grade runner: 26/26 células (HRL 4 + main 16 + algo 6) em ~6 min, `master.json` resume verificado (re-run pula prontas).
+- Rodar tudo: `wsl -e env PYTHONPATH=... /root/procgen-jax/bin/python -m jax_port.tests.run_tests` (stats+parity+zoo+smoke, ~3 min) e `run_grade.py --suite <s> --games <g> --seeds 42-46 --timesteps 100000 --eval-full` para a grade real.
 
 ### 15.3. Benchmark pareado justo — mesma máquina, mesmo dia (05/09/2026, `coinrun`, 100k, seed 42)
 
@@ -689,7 +717,7 @@ Fontes: `jax_port/pa2_coinrun_100k.json`, `jax_port/pa2_starpilot_100k.json` (fa
 
 **Riscos conhecidos para a paridade.** Paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k` — agora ~2–4 h de treino em vez de dias). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
 
-**Artefatos do porte (mesmo branch, por decisão do autor).** Os scripts originais do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`) foram apagados da árvore na restauração e permanecem só como registro histórico/§14.3 (eram arquivos nunca commitados, portanto não recuperáveis via `git show` — sua função está documentada aqui). O porte vive em `jax_port/` no próprio `main`: `vector_env.py` (fronteira fiel a `procgen_wrapper.py:29,41,91`), `bench_throughput.py` + `pa1_throughput.json` (PA1), `networks.py` + `ppo.py` + `train.py` + `pa2_*_100k.json` (PA2-velocidade). O diretório do estudo (raiz, `models/`, `results/`) segue intocado.
+**Artefatos do porte (mesmo branch, por decisão do autor).** Os scripts originais do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`) foram apagados da árvore na restauração e permanecem só como registro histórico/§14.3 (eram arquivos nunca commitados, portanto não recuperáveis via `git show` — sua função está documentada aqui). O porte vive em `jax_port/` no próprio `main`: núcleo (`vector_env.py`, `bench_throughput.py`, `networks.py`, `backbones.py`, `ppo.py`, `dqn.py`, `augment.py`, `exploration.py`), trainers (`train.py`, `train_dqn.py`, `train_hrl.py`), harness (`stats.py`, `run_grade.py`, `tests/`), bench justo (`bench_sb3_paired.py` na raiz + `paired_*.json`) e JSONs de evidência (`pa1_*`, `pa2_*`). O diretório do estudo (raiz, `models/`, `results/`) segue intocado.
 
 ---
 

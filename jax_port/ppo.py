@@ -16,7 +16,11 @@ import jax.numpy as jnp
 import optax
 
 
-def make_optimizer(lr=3e-4, max_grad_norm=0.5):
+def make_optimizer(lr=3e-4, max_grad_norm=0.5, kind="adam"):
+    # SB3: PPO usa Adam; A2C usa RMSprop (default). Estudo: A2C lr 3e-4.
+    if kind == "rmsprop":
+        return optax.chain(optax.clip_by_global_norm(max_grad_norm),
+                           optax.rmsprop(lr, eps=1e-5))
     return optax.chain(
         optax.clip_by_global_norm(max_grad_norm),
         optax.adam(lr, eps=1e-5),
@@ -39,7 +43,7 @@ def compute_gae(rewards, values, dones, last_value, gamma=0.99, lam=0.95):
 
 
 def make_update_fn(model, optimizer, clip_range=0.2, vf_coef=0.5, ent_coef=0.01):
-    """Retorna (update_jit, rollout_jit, forward_jit). Estado: (params, opt_state).
+    """Retorna (update_jit, rollout_jit, forward_jit, norm).
 
     Todo numero que pode morar no device mora no device: o update recebe
     obs uint8 contiguo (preprocess dentro do JIT) e o rollout amostra
@@ -48,42 +52,53 @@ def make_update_fn(model, optimizer, clip_range=0.2, vf_coef=0.5, ent_coef=0.01)
     (``d_obs[d_mb]``) custa ~457ms/call neste setup; slicing no host +
     H2D contiguo custa ~12ms/call (~40x). O loop de minibatches usa
     portanto slicing numpy + H2D por call (ver ``train.py``).
+    A ``key`` e sempre passada (backbones estocasticos, ex. VAE,
+    amostram z fresco por forward — como no estudo); deterministicos
+    a ignoram.
     """
 
-    def loss_fn(params, obs_u8, act, old_logp, adv, ret):
+    def loss_fn(params, obs_u8, act, old_logp, adv, ret, key):
         obs = obs_u8.astype(jnp.float32) / 255.0
-        logits, value = model.apply(params, obs)
+        logits, value = model.apply(params, obs, key)
         logp_all = jax.nn.log_softmax(logits)
         logp = jnp.take_along_axis(logp_all, act[:, None], axis=1).squeeze(1)
         ratio = jnp.exp(logp - old_logp)
-        pg1 = ratio * adv
-        pg2 = jnp.clip(ratio, 1.0 - clip_range, 1.0 + clip_range) * adv
-        pg_loss = -jnp.mean(jnp.minimum(pg1, pg2))
-        v_clipped = ret + jnp.clip(value - ret, -clip_range, clip_range)
-        v_loss = jnp.mean(jnp.maximum((value - ret) ** 2, (v_clipped - ret) ** 2)) / 2.0
+        if clip_range is None:
+            # A2C: policy gradient puro, sem clipping (default SB3).
+            pg_loss = -jnp.mean(ratio * adv)
+        else:
+            pg1 = ratio * adv
+            pg2 = jnp.clip(ratio, 1.0 - clip_range, 1.0 + clip_range) * adv
+            pg_loss = -jnp.mean(jnp.minimum(pg1, pg2))
+        if clip_range is None:
+            v_loss = (jnp.mean((value - ret) ** 2)) / 2.0
+        else:
+            v_clipped = ret + jnp.clip(value - ret, -clip_range, clip_range)
+            v_loss = jnp.mean(jnp.maximum((value - ret) ** 2,
+                                          (v_clipped - ret) ** 2)) / 2.0
         entropy = -jnp.mean(jnp.sum(jax.nn.softmax(logits) * logp_all, axis=1))
         return pg_loss + vf_coef * v_loss - ent_coef * entropy
 
     @jax.jit
-    def update_real(state, obs_u8, act, old_logp, adv, ret):
+    def update_real(state, obs_u8, act, old_logp, adv, ret, key):
         params, opt_state = state
-        loss, grads = jax.value_and_grad(loss_fn)(params, obs_u8, act, old_logp, adv, ret)
+        loss, grads = jax.value_and_grad(loss_fn)(params, obs_u8, act, old_logp, adv, ret, key)
         updates, opt_state = optimizer.update(grads, opt_state, params)
         params = optax.apply_updates(params, updates)
         return (params, opt_state), loss
 
     @jax.jit
     def rollout_step(params, obs_u8, key):
+        key, kz, ks = jax.random.split(key, 3)
         obs = obs_u8.astype(jnp.float32) / 255.0
-        logits, value = model.apply(params, obs)
-        key, ks = jax.random.split(key)
+        logits, value = model.apply(params, obs, kz)
         act = jax.random.categorical(ks, logits)
         logp = jax.nn.log_softmax(logits)[jnp.arange(logits.shape[0]), act]
         return act, logp, value, key
 
     @jax.jit
-    def forward(params, obs):
-        return model.apply(params, obs)
+    def forward(params, obs, key):
+        return model.apply(params, obs, key)
 
     @jax.jit
     def normalize_adv(adv):
