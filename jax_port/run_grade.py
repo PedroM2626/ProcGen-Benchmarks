@@ -151,6 +151,18 @@ def cells(args):
                                     "kind": "ppo", "game": game, "seed": s,
                                     "timesteps": t, "extractor": "gat",
                                     "augment": "none", "explore": "none"})
+        elif suite == "aux":
+            # EXTENSAO alem do estudo: CURL/CPC/ACL (contempla o pedido;
+            # SPR tem suite propria). Classic + aux, sem aug extra.
+            for cfg in ("curl", "cpc", "acl"):
+                for game in (args.games or MAIN_GAMES):
+                    for s in args.seeds:
+                        for t in args.timesteps:
+                            out.append({"suite": suite, "cfg": cfg,
+                                        "kind": "ppo", "game": game, "seed": s,
+                                        "timesteps": t, "extractor": "classic",
+                                        "augment": "none", "explore": "none",
+                                        "aux": cfg})
     return out
 
 
@@ -197,7 +209,7 @@ def main():
     ap.add_argument("--suite", nargs="+",
                     default=["main"],
                     choices=["main", "exploration", "algo", "hrl", "budget",
-                             "hard", "pilot", "spr", "gnn"])
+                             "hard", "pilot", "spr", "gnn", "aux"])
     ap.add_argument("--games", nargs="*", default=None)
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--timesteps", type=int, nargs="+", default=[100000])
