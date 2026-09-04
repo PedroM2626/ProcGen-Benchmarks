@@ -2,140 +2,165 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import flax.linen as nn
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from src.marl_env import MultiAgentParticleEnv
-from src.marl_comm_modules import CommActorCritic
-from src.marl import CentralizedCritic, QMIXMixingNetwork
+from src.marl_trainers import MARLPPOTrainer, MARLQTrainer, make_marl_evaluator
+from src.marl_paradigms import FogOfWarEnv, JointPPOTrainer
 
 
-def run_marl_4_paradigms_benchmark():
-    print("=" * 135, flush=True)
-    print("   BENCHMARK DOS 4 GRANDES PARADIGMAS DE MULTI-AGENT RL (MARL) EM JAX:")
-    print("   1. CTDE (MA-POCA/MAPPO)  |  2. Value Decomposition (QMIX/VDN)")
-    print("   3. Centralized Joint (CTE)  |  4. Explicit Communication (TarMAC/CommNet)")
-    print("   Sob Visão Clara vs Nevoeiro de Guerra (Fog-of-War POMDP)")
-    print("=" * 135, flush=True)
+def _ppo_sel(trainer, params):
+    def sel(obs, gstate, rng):
+        E, N, d = obs.shape
+        logits = trainer.actor.apply({'params': params['actor']}, obs.reshape(-1, d)).reshape(E, N, trainer.A)
+        return jnp.argmax(logits, axis=-1)
+    return sel
 
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print(f"Dispositivo de Execução: {devices[0]} ({backend.upper()})\n", flush=True)
 
-    # 1. Instanciar ambiente com 3 agentes
-    env = MultiAgentParticleEnv(num_agents=3, num_landmarks=3)
-    num_envs = 128
-    rng = jax.random.PRNGKey(42)
+def _q_sel(trainer, params):
+    def sel(obs, gstate, rng):
+        E, N, d = obs.shape
+        q = trainer.qnet.apply({'params': params['q']}, obs.reshape(-1, d)).reshape(E, N, trainer.A)
+        return jnp.argmax(q, axis=-1)
+    return sel
 
-    # Função de máscara de Fog-of-War (raio de visão r = 0.35)
-    def apply_fog_of_war(obs: jnp.ndarray, vision_radius: float = 0.35) -> jnp.ndarray:
-        # Mascara alvos e agentes fora do raio de visão local
-        # Simula oclusão realista de sensores
-        pos = obs[..., :2]
-        rel_landmarks = obs[..., 4:10] # 3 alvos x 2 coords
-        diff_lm = rel_landmarks.reshape(*obs.shape[:-1], 3, 2)
-        dist_lm = jnp.sqrt(jnp.sum(diff_lm**2, axis=-1, keepdims=True))
-        mask_lm = (dist_lm < vision_radius).repeat(2, axis=-1).reshape(*obs.shape[:-1], 6)
-        
-        # Oclusão aplicada: zera features fora do campo de visão
-        obs_fog = obs.at[..., 4:10].set(obs[..., 4:10] * mask_lm)
-        return obs_fog
 
-    results = {}
+def train_paradigm(paradigm, env, total_steps, num_envs, seed, eval_envs=256):
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    reset_vmap = jax.jit(jax.vmap(env.reset))
+    obs, gstate, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
 
-    # Paradigmas a comparar:
-    # 1. CTDE (MA-POCA)
-    # 2. Value Decomposition (QMIX)
-    # 3. Centralized Joint Controller (CTE)
-    # 4. Explicit Communication (CommNet/TarMAC)
+    t0 = time.time()
+    if paradigm == "CTDE":
+        tr = MARLPPOTrainer("MAPPO", env, num_envs=num_envs, num_steps=64)
+        params, opt_state = tr.create_state(init_rng)
+        step = tr.make_train_step()
+        carry = (params, opt_state, env_state, obs, gstate, run_rng)
+        per_iter = num_envs * 64
+        iters = max(1, total_steps // per_iter)
+        for it in range(iters):
+            carry, m = step(carry, None)
+        sel = _ppo_sel(tr, carry[0])
+    elif paradigm == "ValueDecomp":
+        tr = MARLQTrainer("QMIX", env, num_envs=num_envs, eps_decay_steps=total_steps // 2)
+        params, target, opt_state, buffer = tr.create_state(init_rng)
+        step = tr.make_train_step()
+        carry = (params, target, opt_state, buffer, env_state, obs, gstate, run_rng)
+        per_iter = num_envs
+        iters = max(1, total_steps // per_iter)
+        for it in range(iters):
+            carry, m = step(it, carry)
+        sel = _q_sel(tr, carry[0])
+    else:  # CTE or COMM
+        tr = JointPPOTrainer(paradigm, env, num_envs=num_envs, num_steps=64)
+        params, opt_state = tr.create_state(init_rng)
+        step = tr.make_train_step()
+        carry = (params, opt_state, env_state, obs, gstate, run_rng)
+        per_iter = num_envs * 64
+        iters = max(1, total_steps // per_iter)
+        for it in range(iters):
+            carry, m = step(carry, None)
+        sel = tr.make_selector(carry[0])
+
+    elapsed = time.time() - t0
+    real_steps = iters * per_iter
+    fps = real_steps / (elapsed + 1e-8)
+    eval_fn = make_marl_evaluator(env, sel, num_envs=eval_envs)
+    rew, rew_std, cov, col = eval_fn(jax.random.PRNGKey(seed + 777))
+    return {"reward": rew, "reward_std": rew_std, "coverage": cov, "collisions": col,
+            "fps": fps, "steps": int(real_steps)}
+
+
+def run_4_paradigms(total_steps=2_000_000, num_envs=128, seeds=(0, 1, 2), eval_envs=256, fog_radius=0.40):
+    print("=" * 120, flush=True)
+    print("   BENCHMARK REAL DOS 4 PARADIGMAS MARL (TREINADOS) — VISÃO CLARA vs FOG-OF-WAR", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   total_steps={total_steps:,} | num_envs={num_envs} | seeds={list(seeds)} | raio fog={fog_radius}", flush=True)
+    print("=" * 120, flush=True)
+
+    base = MultiAgentParticleEnv(num_agents=3, num_landmarks=3, max_steps=50)
     paradigms = [
-        {
-            "id": "CTDE_MAPOCA",
-            "nome": "CTDE (MA-POCA)",
-            "familia": "Policy-Based CTDE",
-            "execucao": "Descentralizada (Zero Comunicação)",
-            "banda_bytes": 0,
-            "complexidade_acoes": "Linear O(N * |A|)",
-            "reward_clear": -0.68,
-            "cobertura_clear": 96.8,
-            "reward_fog": -1.35, # Cai porque agentes ficam cegos sem comunicação
-            "cobertura_fog": 78.5,
-            "fps": 1812000,
-            "diagnostico": "Excelente e leve em visão limpa. Sob nevoeiro, sofre por não poder compartilhar visão."
-        },
-        {
-            "id": "ValueDecomposition_QMIX",
-            "nome": "Value Decomposition (QMIX)",
-            "familia": "Value-Based Monotonic",
-            "execucao": "Descentralizada (Argmax Q_i)",
-            "banda_bytes": 0,
-            "complexidade_acoes": "Linear O(N * |A|)",
-            "reward_clear": -0.82,
-            "cobertura_clear": 93.2,
-            "reward_fog": -1.58,
-            "cobertura_fog": 72.4,
-            "fps": 1950000,
-            "diagnostico": "Rápido e sample-efficient. Degrada sob nevoeiro e restrição de monotonicidade."
-        },
-        {
-            "id": "Centralized_CTE",
-            "nome": "Centralized Joint Controller (CTE)",
-            "familia": "Centralized Super-Agent",
-            "execucao": "Centralizada (Requer Link Contínuo 100%)",
-            "banda_bytes": 128, # Envio contínuo de telemetria completa
-            "complexidade_acoes": "Exponencial O(|A|^N)",
-            "reward_clear": -0.74,
-            "cobertura_clear": 94.8,
-            "reward_fog": -1.48,
-            "cobertura_fog": 74.0,
-            "fps": 920000, # Mais lento pelo espaço de ação gigante
-            "diagnostico": "Sofre da maldição da dimensionalidade (|A|^N). Se o link cair, todo o sistema para."
-        },
-        {
-            "id": "Explicit_Communication",
-            "nome": "Explicit Communication (TarMAC / CommNet)",
-            "familia": "Learned Graph Attention Communication",
-            "execucao": "Distribuída com Mensagens Neurais (GAT)",
-            "banda_bytes": 64, # 16 floats x 4 bytes de mensagem latente
-            "complexidade_acoes": "Linear O(N * |A|) + GAT",
-            "reward_clear": -0.62,
-            "cobertura_clear": 98.1,
-            "reward_fog": -0.75, # CAMPEÃO SOB NEVOEIRO! Agentes avisam os parceiros
-            "cobertura_fog": 95.4,
-            "fps": 1450000,
-            "diagnostico": "CAMPEÃO ABSOLUTO SOB NEVOEIRO: Agentes criam linguagem neural e compartilham alvos ocultos!"
-        }
+        ("CTDE", "CTDE (MA-POCA / MAPPO)", "Policy-Based CTDE"),
+        ("ValueDecomp", "Value Decomposition (QMIX)", "Value-Based Monotonic"),
+        ("CTE", "Centralized Joint (CTE)", "Centralized Super-Agent"),
+        ("COMM", "Explicit Comm (TarMAC / GAT)", "Graph Attention Messaging"),
     ]
+    conditions = [("clear", False), ("fog", True)]
 
-    for p in paradigms:
-        # Calcular degradação percentual sob nevoeiro
-        deg = ((p["reward_fog"] - p["reward_clear"]) / abs(p["reward_clear"])) * 100
-        p["degradacao_nevoeiro_pct"] = round(deg, 1)
-        results[p["id"]] = p
+    results_data = []
+    for pid, pname, fam in paradigms:
+        entry = {"id": pid, "nome": pname, "familia": fam}
+        for cond, fog in conditions:
+            env = FogOfWarEnv(base, fog=fog, radius=fog_radius)
+            runs = []
+            print(f"\n>>> Treinando {pname} [{cond.upper()}]...", flush=True)
+            for seed in seeds:
+                r = train_paradigm(pid, env, total_steps, num_envs, seed, eval_envs)
+                runs.append({"seed": seed, **r})
+                print(f"  [{pid}/{cond} s{seed}] Reward={r['reward']:+.2f}±{r['reward_std']:.2f} "
+                      f"Cob={r['coverage']:.1f}% Col={r['collisions']:.2f} FPS={r['fps']:,.0f}", flush=True)
+            entry[f"reward_{cond}"] = round(float(np.mean([x["reward"] for x in runs])), 2)
+            entry[f"reward_{cond}_std"] = round(float(np.std([x["reward"] for x in runs])), 2)
+            entry[f"cobertura_{cond}"] = round(float(np.mean([x["coverage"] for x in runs])), 1)
+            entry[f"colisoes_{cond}"] = round(float(np.mean([x["collisions"] for x in runs])), 2)
+            entry[f"fps_{cond}"] = round(float(np.mean([x["fps"] for x in runs])), 0)
+            entry[f"runs_{cond}"] = runs
+        results_data.append(entry)
+        out = Path("results/marl_4_paradigms_results.json")
+        out.parent.mkdir(exist_ok=True)
+        with open(out, "w") as f:
+            json.dump(results_data, f, indent=2)
 
-    print(f"{'Paradigma MARL':<30} | {'Família Teórica':<26} | {'Visão Limpa':<12} | {'Nevoeiro':<10} | {'Degradação':<12} | {'Banda':<10}", flush=True)
-    print("-" * 115, flush=True)
-    for p in paradigms:
-        print(f"{p['nome']:<30} | {p['familia']:<26} | {p['reward_clear']:>10.2f}  | {p['reward_fog']:>8.2f} | {p['degradacao_nevoeiro_pct']:>10.1f}% | {p['banda_bytes']:>6} B/step", flush=True)
-
-    out_file = Path("results/marl_4_paradigms_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print("\n" + "=" * 135, flush=True)
-    print(f"[CONCLUÍDO] Benchmark dos 4 Paradigmas de MARL salvo em: {out_file}", flush=True)
-    print("=" * 135, flush=True)
-    return results
+    # Figure from REAL numbers
+    names = [p["nome"].split(" (")[0] for p in results_data]
+    x = np.arange(len(names))
+    w = 0.35
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5.5))
+    rc = [p["reward_clear"] for p in results_data]
+    rf = [p["reward_fog"] for p in results_data]
+    ax1.bar(x - w/2, rc, w, label='Visão Clara', color='#10b981', edgecolor='black')
+    ax1.bar(x + w/2, rf, w, label=f'Fog-of-War (r={fog_radius}m)', color='#ef4444', edgecolor='black')
+    ax1.set_xticks(x); ax1.set_xticklabels(names, rotation=15, ha='right', fontweight='bold')
+    ax1.set_ylabel('Recompensa cooperativa (episódio)', fontweight='bold')
+    ax1.set_title('Retorno Real Treinado — 4 Paradigmas MARL', fontweight='bold')
+    ax1.legend()
+    cc = [p["cobertura_clear"] for p in results_data]
+    cf = [p["cobertura_fog"] for p in results_data]
+    ax2.bar(x - w/2, cc, w, label='Visão Clara', color='#3b82f6', edgecolor='black')
+    ax2.bar(x + w/2, cf, w, label='Fog-of-War', color='#f59e0b', edgecolor='black')
+    ax2.set_xticks(x); ax2.set_xticklabels(names, rotation=15, ha='right', fontweight='bold')
+    ax2.set_ylabel('Cobertura de alvos (%)', fontweight='bold'); ax2.set_ylim(0, 115)
+    ax2.set_title('Cobertura sob Oclusão (POMDP)', fontweight='bold')
+    ax2.legend()
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/07_marl_4_paradigms_benchmark.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    print("\n[SUCESSO] Resultados reais em results/marl_4_paradigms_results.json "
+          "e figures/07_marl_4_paradigms_benchmark.png", flush=True)
+    return results_data
 
 
 if __name__ == "__main__":
-    run_marl_4_paradigms_benchmark()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=2_000_000)
+    p.add_argument("--num-envs", type=int, default=128)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-envs", type=int, default=256)
+    p.add_argument("--fog-radius", type=float, default=0.40)
+    a = p.parse_args()
+    run_4_paradigms(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds),
+                    eval_envs=a.eval_envs, fog_radius=a.fog_radius)

@@ -1,0 +1,50 @@
+{
+  "NatureCNN": [
+    {
+      "seed": 0,
+      "steps": 2998272,
+      "elapsed_sec": 593.76,
+      "fps": 5049.6,
+      "train_score": 8.788,
+      "train_std": 2.038,
+      "unseen_score": 7.991,
+      "unseen_std": 2.085,
+      "gen_gap": 0.797
+    },
+    {
+      "seed": 1,
+      "steps": 2998272,
+      "elapsed_sec": 599.54,
+      "fps": 5000.9,
+      "train_score": 9.85,
+      "train_std": 1.928,
+      "unseen_score": 9.022,
+      "unseen_std": 2.445,
+      "gen_gap": 0.828
+    }
+  ],
+  "ImpalaCNN": [
+    {
+      "seed": 0,
+      "steps": 2998272,
+      "elapsed_sec": 1340.2,
+      "fps": 2237.2,
+      "train_score": 9.803,
+      "train_std": 2.447,
+      "unseen_score": 9.506,
+      "unseen_std": 2.296,
+      "gen_gap": 0.297
+    },
+    {
+      "seed": 1,
+      "steps": 2998272,
+      "elapsed_sec": 1340.89,
+      "fps": 2236.0,
+      "train_score": 9.553,
+      "train_std": 2.076,
+      "unseen_score": 8.694,
+      "unseen_std": 2.743,
+      "gen_gap": 0.859
+    }
+  ]
+}

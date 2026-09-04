@@ -1,91 +1,68 @@
+"""Orchestrator for the two Craftax single-agent studies (algorithm families + HRL).
+
+Both use REAL gradient training and REAL episodic evaluation. Results are written
+to results/algo_families_results.json, results/hrl_results.json and summarized in
+results/summary_metrics.json.
+"""
+import os
+import sys
 import time
 import json
+import argparse
 from pathlib import Path
+
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from experiments.compare_algos import run_algo_benchmark
 from experiments.compare_hrl import run_hrl_benchmark
 
 
-def main():
-    print("=" * 80)
-    print("      CRAFTAX + PUREJAXRL HIGH-SPEED BENCHMARK SUITE")
-    print("      Replicando o Estudo do ProcGen na Velocidade do JAX")
-    print("=" * 80)
+def _agg(runs):
+    n = len(runs)
+    return {
+        "avg_fps": round(sum(r["fps"] for r in runs) / n, 1),
+        "avg_time": round(sum(r["elapsed_sec"] for r in runs) / n, 2),
+        "avg_train": round(sum(r["train_score"] for r in runs) / n, 3),
+        "avg_unseen": round(sum(r["unseen_score"] for r in runs) / n, 3),
+        "avg_gap": round(sum(r["gen_gap"] for r in runs) / n, 3),
+    }
 
-    start_total = time.time()
-    
-    # 1. Benchmark de Famílias (PPO vs A2C vs DQN)
-    algo_results_file = Path("results/algo_families_results.json")
-    if algo_results_file.exists():
-        print("\n[FASE 1/2] Resultados de Famílias já computados. Carregando 'results/algo_families_results.json'...")
-        with open(algo_results_file, "r") as f:
-            algo_results = json.load(f)
-    else:
-        print("\n[FASE 1/2] Executando Benchmark de Famílias de Algoritmos...")
-        algo_results = run_algo_benchmark(total_steps=50000, num_envs=64, seeds=[42, 123])
 
-    # 2. Benchmark de HRL (flat vs skip4 vs hrl vs hrl_learned)
-    print("\n[FASE 2/2] Executando Benchmark de HRL e Abstração Temporal...")
-    hrl_results = run_hrl_benchmark(total_steps=50000, num_envs=64, seeds=[42, 123])
+def main(total_steps, num_envs, seeds):
+    print("=" * 80, flush=True)
+    print("      CRAFTAX + PUREJAXRL HIGH-SPEED BENCHMARK SUITE (100% TREINADO)", flush=True)
+    print("=" * 80, flush=True)
+    start = time.time()
 
-    total_elapsed = time.time() - start_total
+    print("\n[FASE 1/2] Famílias de Algoritmos (PPO vs A2C vs DQN)...", flush=True)
+    algo = run_algo_benchmark(total_steps=total_steps, num_envs=num_envs, seeds=seeds)
 
-    # Montar Relatório Final
-    print("\n" + "=" * 80)
-    print("                    TABELA FINAL DE RESULTADOS")
-    print("=" * 80)
+    print("\n[FASE 2/2] HRL & Abstração Temporal (flat/skip4/hrl/hrl_learned)...", flush=True)
+    hrl = run_hrl_benchmark(total_steps=total_steps, num_envs=num_envs, seeds=seeds)
 
-    print("\n--- TABELA 1: Famílias de Algoritmos (PPO vs A2C vs DQN) ---")
-    print(f"{'Algoritmo':<10} | {'Média FPS':<10} | {'Tempo Médio':<12} | {'Train Score':<12} | {'Unseen Score':<12} | {'Gen Gap':<10}")
-    print("-" * 75)
-    
-    summary_data = {"algos": {}, "hrl": {}, "total_time_seconds": round(total_elapsed, 2)}
+    total = time.time() - start
+    summary = {"algos": {k: _agg(v) for k, v in algo.items()},
+               "hrl": {k: _agg(v) for k, v in hrl.items()},
+               "total_time_seconds": round(total, 2)}
 
-    for algo, runs in algo_results.items():
-        avg_fps = sum(r['fps'] for r in runs) / len(runs)
-        avg_time = sum(r['elapsed_sec'] for r in runs) / len(runs)
-        avg_train = sum(r['train_score'] for r in runs) / len(runs)
-        avg_unseen = sum(r['unseen_score'] for r in runs) / len(runs)
-        avg_gap = sum(r['gen_gap'] for r in runs) / len(runs)
-        
-        summary_data["algos"][algo] = {
-            "avg_fps": round(avg_fps, 1),
-            "avg_time": round(avg_time, 2),
-            "avg_train": round(avg_train, 3),
-            "avg_unseen": round(avg_unseen, 3),
-            "avg_gap": round(avg_gap, 3)
-        }
-        print(f"{algo:<10} | {avg_fps:<10.0f} | {avg_time:<10.1f}s | {avg_train:<12.2f} | {avg_unseen:<12.2f} | {avg_gap:<+10.2f}")
+    print("\n" + "=" * 80, flush=True)
+    print("TABELA 1 — Famílias de Algoritmos", flush=True)
+    for k, v in summary["algos"].items():
+        print(f"  {k:<5} FPS={v['avg_fps']:>9,.0f} Train={v['avg_train']:.2f} Unseen={v['avg_unseen']:.2f}", flush=True)
+    print("TABELA 2 — HRL & Abstração Temporal", flush=True)
+    for k, v in summary["hrl"].items():
+        print(f"  {k:<12} FPS={v['avg_fps']:>9,.0f} Train={v['avg_train']:.2f} Unseen={v['avg_unseen']:.2f}", flush=True)
+    print(f"\nBENCHMARK COMPLETO EM {total:.1f}s (~{total/60:.2f} min)", flush=True)
 
-    print("\n--- TABELA 2: Hierarchical RL & Abstração Temporal ---")
-    print(f"{'Modo HRL':<12} | {'Média FPS':<10} | {'Tempo Médio':<12} | {'Train Score':<12} | {'Unseen Score':<12} | {'Gen Gap':<10}")
-    print("-" * 75)
-    
-    for mode, runs in hrl_results.items():
-        avg_fps = sum(r['fps'] for r in runs) / len(runs)
-        avg_time = sum(r['elapsed_sec'] for r in runs) / len(runs)
-        avg_train = sum(r['train_score'] for r in runs) / len(runs)
-        avg_unseen = sum(r['unseen_score'] for r in runs) / len(runs)
-        avg_gap = sum(r['gen_gap'] for r in runs) / len(runs)
-        
-        summary_data["hrl"][mode] = {
-            "avg_fps": round(avg_fps, 1),
-            "avg_time": round(avg_time, 2),
-            "avg_train": round(avg_train, 3),
-            "avg_unseen": round(avg_unseen, 3),
-            "avg_gap": round(avg_gap, 3)
-        }
-        print(f"{mode:<12} | {avg_fps:<10.0f} | {avg_time:<10.1f}s | {avg_train:<12.2f} | {avg_unseen:<12.2f} | {avg_gap:<+10.2f}")
-
-    print("=" * 80)
-    print(f"BENCHMARK COMPLETO CONCLUÍDO EM: {total_elapsed:.1f} SEGUNDOS (~{total_elapsed/60:.2f} MINUTOS)!")
-    print("Comparado às ~9 horas do ProcGen tradicional, este benchmark rodou em tempo recorde.")
-    print("=" * 80)
-
-    # Salva resumo estruturado
     with open("results/summary_metrics.json", "w") as f:
-        json.dump(summary_data, f, indent=2)
+        json.dump(summary, f, indent=2)
 
 
 if __name__ == "__main__":
-    main()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=8_000_000)
+    p.add_argument("--num-envs", type=int, default=256)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    a = p.parse_args()
+    main(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds))

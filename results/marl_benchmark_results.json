@@ -1,37 +1,207 @@
 {
   "IPPO": {
     "paradigma": "Descentralizado (Independente)",
-    "throughput_fps": 2123269.0,
-    "coop_reward": -2.41,
-    "cobertura_alvos": "68.5%",
-    "estabilidade": "M\u00e9dia (sofre com ambiente n\u00e3o-estacion\u00e1rio)"
-  },
-  "MAPPO": {
-    "paradigma": "CTDE (Cr\u00edtico Centralizado MLP)",
-    "throughput_fps": 2055505.0,
-    "coop_reward": -1.18,
-    "cobertura_alvos": "92.4%",
-    "estabilidade": "Alta (CTDE elimina n\u00e3o-estacionariedade)"
-  },
-  "MA-POCA": {
-    "paradigma": "CTDE + Auto-Aten\u00e7\u00e3o + Baseline Contrafactual",
-    "throughput_fps": 1942566.0,
-    "coop_reward": -0.98,
-    "cobertura_alvos": "96.8%",
-    "estabilidade": "Excelente (Resolve Credit Assignment e Lazy Agent)"
+    "coop_reward": -78.577,
+    "coop_reward_std": 25.983,
+    "seed_reward_std": 4.359,
+    "cobertura_alvos": 26.9,
+    "colisoes": 1.185,
+    "throughput_fps": 357067.0,
+    "runs": [
+      {
+        "seed": 0,
+        "reward": -72.4779281616211,
+        "reward_std": 28.075267791748047,
+        "coverage": 29.549473524093628,
+        "collisions": 0.9095312356948853,
+        "fps": 162082.88555053103,
+        "elapsed": 12.332258224487305,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -80.85564422607422,
+        "reward_std": 23.129362106323242,
+        "coverage": 25.1406192779541,
+        "collisions": 1.2905468940734863,
+        "fps": 433597.31085974653,
+        "elapsed": 4.609917879104614,
+        "steps": 1998848
+      },
+      {
+        "seed": 2,
+        "reward": -82.39875793457031,
+        "reward_std": 26.74448013305664,
+        "coverage": 25.929683446884155,
+        "collisions": 1.3563281297683716,
+        "fps": 475520.2966685654,
+        "elapsed": 4.203496694564819,
+        "steps": 1998848
+      }
+    ]
   },
   "VDN": {
-    "paradigma": "Fatora\u00e7\u00e3o Aditiva Q_tot = sum(Qi)",
-    "throughput_fps": 2168445.0,
-    "coop_reward": -1.85,
-    "cobertura_alvos": "79.2%",
-    "estabilidade": "M\u00e9dia-Alta (Restrita a aditividade linear)"
+    "paradigma": "Fatora\u00e7\u00e3o Aditiva Q_tot=\u03a3Q_i",
+    "coop_reward": -17.516,
+    "coop_reward_std": 5.596,
+    "seed_reward_std": 0.174,
+    "cobertura_alvos": 93.1,
+    "colisoes": 0.038,
+    "throughput_fps": 155604.0,
+    "runs": [
+      {
+        "seed": 0,
+        "reward": -17.484142303466797,
+        "reward_std": 6.083281517028809,
+        "coverage": 93.05468797683716,
+        "collisions": 0.049687497317790985,
+        "fps": 113926.19637564385,
+        "elapsed": 17.555224895477295,
+        "steps": 2000000
+      },
+      {
+        "seed": 1,
+        "reward": -17.743301391601562,
+        "reward_std": 5.255668640136719,
+        "coverage": 92.86458492279053,
+        "collisions": 0.04281250014901161,
+        "fps": 175980.20019294438,
+        "elapsed": 11.364914894104004,
+        "steps": 2000000
+      },
+      {
+        "seed": 2,
+        "reward": -17.321041107177734,
+        "reward_std": 5.450181007385254,
+        "coverage": 93.30989122390747,
+        "collisions": 0.021562499925494194,
+        "fps": 176907.04526121676,
+        "elapsed": 11.30537223815918,
+        "steps": 2000000
+      }
+    ]
+  },
+  "MAPPO": {
+    "paradigma": "CTDE (Cr\u00edtico Centralizado)",
+    "coop_reward": -77.205,
+    "coop_reward_std": 24.589,
+    "seed_reward_std": 8.625,
+    "cobertura_alvos": 25.8,
+    "colisoes": 1.11,
+    "throughput_fps": 175258.0,
+    "runs": [
+      {
+        "seed": 0,
+        "reward": -66.62691497802734,
+        "reward_std": 24.4416561126709,
+        "coverage": 28.979158401489258,
+        "collisions": 0.6202343702316284,
+        "fps": 106865.35107594181,
+        "elapsed": 18.704360008239746,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -77.23486328125,
+        "reward_std": 23.48886489868164,
+        "coverage": 24.82030689716339,
+        "collisions": 1.117343783378601,
+        "fps": 214469.60352727224,
+        "elapsed": 9.31995940208435,
+        "steps": 1998848
+      },
+      {
+        "seed": 2,
+        "reward": -87.75421142578125,
+        "reward_std": 25.836977005004883,
+        "coverage": 23.64322543144226,
+        "collisions": 1.5910155773162842,
+        "fps": 204438.22643389637,
+        "elapsed": 9.777271270751953,
+        "steps": 1998848
+      }
+    ]
   },
   "QMIX": {
-    "paradigma": "Fatora\u00e7\u00e3o Monot\u00f4nica com Hiper-redes",
-    "throughput_fps": 1987742.0,
-    "coop_reward": -1.09,
-    "cobertura_alvos": "95.1%",
-    "estabilidade": "Muito Alta (Campe\u00e3o Value-based)"
+    "paradigma": "Fatora\u00e7\u00e3o Monot\u00f4nica (Hiper-redes)",
+    "coop_reward": -98.487,
+    "coop_reward_std": 33.431,
+    "seed_reward_std": 7.982,
+    "cobertura_alvos": 11.4,
+    "colisoes": 0.246,
+    "throughput_fps": 118207.0,
+    "runs": [
+      {
+        "seed": 0,
+        "reward": -87.81061553955078,
+        "reward_std": 28.08922576904297,
+        "coverage": 13.979163765907288,
+        "collisions": 0.07312499731779099,
+        "fps": 114350.84718190273,
+        "elapsed": 17.490032196044922,
+        "steps": 2000000
+      },
+      {
+        "seed": 1,
+        "reward": -100.65104675292969,
+        "reward_std": 33.705081939697266,
+        "coverage": 10.309894382953644,
+        "collisions": 0.2508593797683716,
+        "fps": 107051.53142476719,
+        "elapsed": 18.682591199874878,
+        "steps": 2000000
+      },
+      {
+        "seed": 2,
+        "reward": -106.99921417236328,
+        "reward_std": 38.49769973754883,
+        "coverage": 9.880205988883972,
+        "collisions": 0.41328123211860657,
+        "fps": 133217.59838930267,
+        "elapsed": 15.013031482696533,
+        "steps": 2000000
+      }
+    ]
+  },
+  "MAPOCA": {
+    "paradigma": "CTDE + Auto-Aten\u00e7\u00e3o + Contrafactual",
+    "coop_reward": -83.092,
+    "coop_reward_std": 24.722,
+    "seed_reward_std": 8.305,
+    "cobertura_alvos": 23.6,
+    "colisoes": 1.207,
+    "throughput_fps": 55208.0,
+    "runs": [
+      {
+        "seed": 0,
+        "reward": -79.50093078613281,
+        "reward_std": 29.018770217895508,
+        "coverage": 27.265620231628418,
+        "collisions": 1.2192968130111694,
+        "fps": 37102.52126167893,
+        "elapsed": 53.87364339828491,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -94.57207489013672,
+        "reward_std": 25.10702133178711,
+        "coverage": 22.388015687465668,
+        "collisions": 1.8864843845367432,
+        "fps": 50429.26628773958,
+        "elapsed": 39.6366662979126,
+        "steps": 1998848
+      },
+      {
+        "seed": 2,
+        "reward": -75.2022705078125,
+        "reward_std": 20.039928436279297,
+        "coverage": 21.052077412605286,
+        "collisions": 0.5154687166213989,
+        "fps": 78091.35895778758,
+        "elapsed": 25.59627628326416,
+        "steps": 1998848
+      }
+    ]
   }
 }

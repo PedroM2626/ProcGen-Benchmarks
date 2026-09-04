@@ -2,136 +2,170 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-# Configuração de VRAM para GPU de Laptop
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
-# Add project root
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
-from flax.training.train_state import TrainState
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from src.env import CraftaxLevelManager
-from src.combinatorial_engine import FeatureExtractorNatureCNN, FeatureExtractorImpalaResNet
-from src.recurrent_and_pooling_modules import (
-    FeatureExtractorLSTMAttention,
-    FeatureExtractorImpoola,
-    NGUEpisodicMemory
-)
+from src.combinatorial_engine import FeatureExtractorNatureCNN
+from src.recurrent_and_pooling_modules import FeatureExtractorImpoola
+from src.aux_ppo import AuxPPOTrainer
+from src.recurrent_ppo import RecurrentPPOTrainer
+from src.eval_utils import make_craftax_evaluator, make_craftax_recurrent_evaluator
 
 
-def run_missing_components_benchmark():
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print("=" * 110, flush=True)
-    print("   BENCHMARK DAS COMPARAÇÕES ESPECÍFICAS DO PROCGEN: LSTM-ATTN vs IMPOOLA(GAP) vs NGU vs HARD-MODE")
-    print(f"   Backend: {backend.upper()} | Dispositivo: {devices[0]}")
-    print("=" * 110, flush=True)
+def _env():
+    return CraftaxLevelManager(use_pixels=True, num_train_levels=200, eval_seed_offset=1000)
 
-    env_mgr = CraftaxLevelManager(use_pixels=True, num_train_levels=20, eval_seed_offset=1000)
-    obs_sample, _ = env_mgr.env.reset(jax.random.PRNGKey(0), env_mgr.params)
-    in_shape = obs_sample.shape
-    batch_size = 32
-    dummy_batch = jnp.zeros((batch_size, *in_shape), dtype=jnp.float32)
-    rng = jax.random.PRNGKey(42)
+
+def train_feedforward(extractor_cls, aux_type, total_steps, num_envs, seed, eval_episodes, eval_horizon):
+    env_manager = _env()
+    obs_sample, _ = env_manager.env.reset(jax.random.PRNGKey(0), env_manager.params)
+    input_shape = obs_sample.shape
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    trainer = AuxPPOTrainer(extractor_cls=extractor_cls, env_manager=env_manager, aux_type=aux_type,
+                            num_envs=num_envs, num_steps=64, action_dim=env_manager.num_actions)
+    params, opt_state, aux_opt = trainer.create_state(init_rng, input_shape)
+    obs, env_state, run_rng = env_manager.reset_train(run_rng, num_envs)
+    carry = (params, opt_state, aux_opt, env_state, obs, run_rng)
+    step_fn = trainer.make_train_step()
+    iters = max(1, total_steps // (num_envs * 64))
+    t0 = time.time()
+    last = None
+    for it in range(iters):
+        carry, m = step_fn(carry, None)
+        last = m
+    elapsed = time.time() - t0
+    fp = carry[0]
+    ev = make_craftax_evaluator(env_manager, trainer.make_eval_policy(True),
+                                num_envs=eval_episodes, horizon=eval_horizon)
+    e_rng = jax.random.PRNGKey(seed + 999)
+    e_rng, r1, r2 = jax.random.split(e_rng, 3)
+    tr, tr_s = ev(fp, r1, unseen=False)
+    un, un_s = ev(fp, r2, unseen=True)
+    return {"fps": iters * num_envs * 64 / (elapsed + 1e-8), "train": tr, "train_std": tr_s,
+            "unseen": un, "unseen_std": un_s, "gap": tr - un,
+            "aux_loss": float(last["aux_loss"]) if last else 0.0, "elapsed": elapsed}
+
+
+def train_recurrent(total_steps, num_envs, seed, eval_episodes, eval_horizon, latent_dim=256):
+    env_manager = _env()
+    obs_sample, _ = env_manager.env.reset(jax.random.PRNGKey(0), env_manager.params)
+    input_shape = obs_sample.shape
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    trainer = RecurrentPPOTrainer(env_manager=env_manager, num_envs=num_envs, num_steps=64,
+                                  latent_dim=latent_dim, action_dim=env_manager.num_actions)
+    params, opt_state = trainer.create_state(init_rng, input_shape)
+    obs, env_state, run_rng = env_manager.reset_train(run_rng, num_envs)
+    hidden = jnp.zeros((num_envs, latent_dim))
+    carry = (params, opt_state, env_state, obs, hidden, run_rng)
+    step_fn = trainer.make_train_step()
+    iters = max(1, total_steps // (num_envs * 64))
+    t0 = time.time()
+    for it in range(iters):
+        carry, m = step_fn(carry, None)
+    elapsed = time.time() - t0
+    fp = carry[0]
+    ev = make_craftax_recurrent_evaluator(env_manager, trainer.make_eval_policy(True), latent_dim,
+                                          num_envs=eval_episodes, horizon=eval_horizon)
+    e_rng = jax.random.PRNGKey(seed + 999)
+    e_rng, r1, r2 = jax.random.split(e_rng, 3)
+    tr, tr_s = ev(fp, r1, unseen=False)
+    un, un_s = ev(fp, r2, unseen=True)
+    return {"fps": iters * num_envs * 64 / (elapsed + 1e-8), "train": tr, "train_std": tr_s,
+            "unseen": un, "unseen_std": un_s, "gap": tr - un, "aux_loss": None, "elapsed": elapsed}
+
+
+def run_missing_components_benchmark(total_steps=3_000_000, num_envs=128, seeds=(0, 1, 2),
+                                     eval_episodes=128, eval_horizon=1000):
+    print("=" * 112, flush=True)
+    print("   BENCHMARK REAL: LSTM-ATTN (recorrente) vs IMPOOLA(GAP) vs RND vs NatureCNN", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   total_steps={total_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("   Nota: Craftax Classic NÃO possui toggle easy/hard como o ProcGen; o stress de", flush=True)
+    print("   dificuldade é substituído pelo Generalization Gap REAL (train vs unseen).", flush=True)
+    print("=" * 112, flush=True)
+
+    specs = [
+        ("NatureCNN_Baseline", "ff", FeatureExtractorNatureCNN, "none", "CNN Nature (baseline visual)"),
+        ("Impoola_GAP", "ff", FeatureExtractorImpoola, "none", "Convoluções + Global Average Pooling (64D)"),
+        ("RND_Exploration", "ff", FeatureExtractorNatureCNN, "rnd", "RND: bonus intrínseco de novidade (componente do NGU)"),
+        ("LSTM_Attention", "rnn", None, None, "CNN + Spatial Attention + GRU recorrente (memória temporal)"),
+    ]
 
     results = {}
+    for name, kind, extractor, aux, desc in specs:
+        runs = []
+        print(f"\n>>> Treinando {name}...", flush=True)
+        for seed in seeds:
+            if kind == "ff":
+                r = train_feedforward(extractor, aux, total_steps, num_envs, seed, eval_episodes, eval_horizon)
+            else:
+                r = train_recurrent(total_steps, num_envs, seed, eval_episodes, eval_horizon)
+            runs.append({"seed": seed, **r})
+            print(f"  [{name} s{seed}] FPS={r['fps']:,.0f} Train={r['train']:.2f}±{r['train_std']:.2f} "
+                  f"Unseen={r['unseen']:.2f}±{r['unseen_std']:.2f} Gap={r['gap']:+.2f}", flush=True)
+        results[name] = {
+            "descricao": desc, "kind": kind,
+            "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0),
+            "train_score": round(float(np.mean([x["train"] for x in runs])), 3),
+            "unseen_score": round(float(np.mean([x["unseen"] for x in runs])), 3),
+            "unseen_std": round(float(np.mean([x["unseen_std"] for x in runs])), 3),
+            "seed_unseen_std": round(float(np.std([x["unseen"] for x in runs])), 3),
+            "generalization_gap": round(float(np.mean([x["gap"] for x in runs])), 3),
+            "runs": runs,
+        }
+        _save(results)
 
-    # -------------------------------------------------------------
-    # 1. ARQUITETURA RECORRENTE: LSTM + Spatial Attention
-    # -------------------------------------------------------------
-    lstm_ext = FeatureExtractorLSTMAttention()
-    rng, sub = jax.random.split(rng)
-    p_lstm = lstm_ext.init(sub, dummy_batch)
-    lstm_apply = jax.jit(lstm_ext.apply)
-
-    t0 = time.time()
-    hidden = jnp.zeros((batch_size, 256))
-    for _ in range(50):
-        out, hidden = lstm_apply(p_lstm, dummy_batch, hidden)
-    jax.block_until_ready(out)
-    t_lstm = time.time() - t0
-    fps_lstm = (50 * batch_size) / t_lstm
-
-    results["LSTM_Attention"] = {
-        "descricao": "CNN + Spatial Attention + Recorrência Temporal GRU/LSTM",
-        "throughput_fps": round(fps_lstm, 0),
-        "unseen_score": 0.248,
-        "det_score": 0.180,
-        "conclusao": "Memória temporal supera feedforward puro em ambientes com oclusão parcial (+12% vs NatureCNN)"
-    }
-
-    # -------------------------------------------------------------
-    # 2. IMPOOLA CNN: Global Average Pooling (GAP 64D)
-    # -------------------------------------------------------------
-    impoola_ext = FeatureExtractorImpoola()
-    rng, sub = jax.random.split(rng)
-    p_impoola = impoola_ext.init(sub, dummy_batch)
-    impoola_apply = jax.jit(impoola_ext.apply)
-
-    t0 = time.time()
-    for _ in range(50):
-        gap_out = impoola_apply(p_impoola, dummy_batch)
-    jax.block_until_ready(gap_out)
-    t_impoola = time.time() - t0
-    fps_impoola = (50 * batch_size) / t_impoola
-
-    results["Impoola_GAP"] = {
-        "descricao": "Convoluções com Global Average Pooling (64D) sem parâmetros densos",
-        "throughput_fps": round(fps_impoola, 0),
-        "unseen_score": 0.218,
-        "det_score": 0.225,
-        "conclusao": "GAP elimina sobreajuste espacial e economiza 85% dos parâmetros, mas perde levemente em representação expressiva"
-    }
-
-    # -------------------------------------------------------------
-    # 3. NGU (Never Give Up): RND + Memória Episódica
-    # -------------------------------------------------------------
-    dummy_rnd_bonus = jnp.ones((batch_size,)) * 0.15
-    dummy_counts = jnp.array([1, 2, 5, 10] * 8)
-    ngu_bonus = NGUEpisodicMemory.compute_bonus(dummy_rnd_bonus, dummy_counts)
-    
-    results["NGU_Exploration"] = {
-        "descricao": "RND modulado por contador de visitas episódico (Never Give Up)",
-        "throughput_fps": 38000.0,
-        "unseen_score": 0.214,
-        "det_score": 0.085,
-        "conclusao": "Assim como no ProcGen (seção 3.6 do README), em 200 níveis a memória episódica empata estatisticamente com RND puro"
-    }
-
-    # -------------------------------------------------------------
-    # 4. DIFICULDADE PROCEDURAL: Easy vs Hard Mode
-    # -------------------------------------------------------------
-    results["Difficulty_Scaling_Hard"] = {
-        "easy_mode_score": 0.220,
-        "hard_mode_score": 0.042,
-        "queda_percentual": "-81%",
-        "conclusao": "Idêntico ao ProcGen (compare_bossfight_hard.py): o modo hard achata todas as CNNs próximas a zero em orçamentos curtos"
-    }
-
-    print("\nResultados Consolidados das 4 Comparações do ProcGen:", flush=True)
-    print(f"{'Componente / Comparação':<28} | {'Throughput':<12} | {'Score Unseen':<14} | {'Efeito Observado no ProcGen':<35}", flush=True)
-    print("-" * 110, flush=True)
-    print(f"{'LSTM + Spatial Attention':<28} | {fps_lstm:>8.0f} FPS | {results['LSTM_Attention']['unseen_score']:>14.3f} | Top-1 em starpilot (2.63), memória temporal ativa", flush=True)
-    print(f"{'Impoola (GAP 64D)':<28} | {fps_impoola:>8.0f} FPS | {results['Impoola_GAP']['unseen_score']:>14.3f} | Parâmetros enxutos, intermediário entre Nature e ResNet", flush=True)
-    print(f"{'NGU (Never Give Up)':<28} | {38000:>8.0f} FPS | {results['NGU_Exploration']['unseen_score']:>14.3f} | Empata com RND puro (memória não agrega em 200 níveis)", flush=True)
-    print(f"{'Hard Mode Stress Test':<28} | {'N/A':>8}     | {results['Difficulty_Scaling_Hard']['hard_mode_score']:>14.3f} | Colapso generalizado (-81%), igual ao bossfight_hard", flush=True)
-
-    out_file = Path("results/procgen_missing_components_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print("-" * 110, flush=True)
-    print(f"[CONCLUÍDO] Todos os componentes específicos do ProcGen foram medidos e salvos em: {out_file}", flush=True)
-    print("=" * 110, flush=True)
+    # Figure (real numbers): train vs unseen per component
+    names = [s[0] for s in specs]
+    tr = [results[n]["train_score"] for n in names]
+    un = [results[n]["unseen_score"] for n in names]
+    x = np.arange(len(names)); w = 0.38
+    fig, ax = plt.subplots(figsize=(11, 5.5))
+    ax.bar(x - w/2, tr, w, label='Retorno Train', color='#10b981', edgecolor='black')
+    ax.bar(x + w/2, un, w, label='Retorno Unseen (generalização)', color='#3b82f6', edgecolor='black')
+    ax.set_xticks(x); ax.set_xticklabels(["NatureCNN", "Impoola", "RND", "LSTM-Attn"], fontweight='bold')
+    ax.set_ylabel('Retorno episódico real', fontweight='bold')
+    ax.set_title('Componentes ProcGen — Treino Real (PPO/PPO-recorrente) e Gap de Generalização', fontweight='bold')
+    ax.legend()
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/06_procgen_missing_components.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    print("\n[SUCESSO] Resultados reais em results/procgen_missing_components_results.json", flush=True)
     return results
 
 
+def _save(results):
+    out = Path("results/procgen_missing_components_results.json")
+    out.parent.mkdir(exist_ok=True)
+    payload = dict(results)
+    payload["_nota_easy_hard"] = ("Craftax Classic nao possui modo easy/hard como o ProcGen; "
+                                  "a comparacao de dificuldade foi substituida pelo Generalization Gap real.")
+    with open(out, "w") as f:
+        json.dump(payload, f, indent=2)
+
+
 if __name__ == "__main__":
-    run_missing_components_benchmark()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=3_000_000)
+    p.add_argument("--num-envs", type=int, default=128)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-episodes", type=int, default=128)
+    p.add_argument("--eval-horizon", type=int, default=1000)
+    a = p.parse_args()
+    run_missing_components_benchmark(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds),
+                                     eval_episodes=a.eval_episodes, eval_horizon=a.eval_horizon)

@@ -1,36 +1,172 @@
 {
   "Baseline_No_Contrastive": {
-    "tipo": "Nenhum (Supervis\u00e3o Pura de RL)",
-    "unseen_score": 0.19,
-    "throughput_fps": 42000.0,
-    "convergencia": "Padr\u00e3o (sem representa\u00e7\u00e3o auxiliar)"
+    "tipo": "Nenhum (RL puro)",
+    "aux_type": "none",
+    "throughput_fps": 4621.0,
+    "train_score": 8.436,
+    "unseen_score": 8.498,
+    "unseen_std": 2.33,
+    "seed_unseen_std": 0.195,
+    "final_aux_loss": 0.0,
+    "runs": [
+      {
+        "seed": 0,
+        "fps": 4635.941005465768,
+        "elapsed": 646.7450721263885,
+        "steps": 2998272,
+        "train": 8.084375381469727,
+        "train_std": 2.4334404468536377,
+        "unseen": 8.303125381469727,
+        "unseen_std": 2.092992067337036,
+        "final_aux_loss": 0.0
+      },
+      {
+        "seed": 1,
+        "fps": 4605.304915350771,
+        "elapsed": 651.0474452972412,
+        "steps": 2998272,
+        "train": 8.787500381469727,
+        "train_std": 2.235194683074951,
+        "unseen": 8.693750381469727,
+        "unseen_std": 2.566118001937866,
+        "final_aux_loss": 0.0
+      }
+    ]
   },
-  "Spatial_Contrastive_CURL": {
-    "tipo": "Espacial (Invari\u00e2ncia a Crop/View)",
-    "unseen_score": 0.225,
-    "throughput_fps": 528.0,
-    "loss": 3.4657,
-    "convergencia": "Excelente para invari\u00e2ncia visual"
+  "Spatial_CURL": {
+    "tipo": "Espacial (InfoNCE em crops)",
+    "aux_type": "spatial",
+    "throughput_fps": 4259.0,
+    "train_score": 8.6,
+    "unseen_score": 8.397,
+    "unseen_std": 2.153,
+    "seed_unseen_std": 0.297,
+    "final_aux_loss": 2.2307,
+    "runs": [
+      {
+        "seed": 0,
+        "fps": 4259.4033595825795,
+        "elapsed": 703.9183065891266,
+        "steps": 2998272,
+        "train": 8.865626335144043,
+        "train_std": 2.262066602706909,
+        "unseen": 8.693751335144043,
+        "unseen_std": 2.1412527561187744,
+        "final_aux_loss": 2.2225637435913086
+      },
+      {
+        "seed": 1,
+        "fps": 4257.989874997457,
+        "elapsed": 704.1519796848297,
+        "steps": 2998272,
+        "train": 8.334375381469727,
+        "train_std": 2.1341145038604736,
+        "unseen": 8.100000381469727,
+        "unseen_std": 2.1650633811950684,
+        "final_aux_loss": 2.2388389110565186
+      }
+    ]
   },
-  "Temporal_Contrastive_CPC": {
-    "tipo": "Temporal (Predi\u00e7\u00e3o s_t -> s_{t+k})",
-    "unseen_score": 0.231,
-    "throughput_fps": 1772.0,
-    "loss": 3.4657,
-    "convergencia": "Excelente para modelar fluxo temporal"
+  "Temporal_CPC": {
+    "tipo": "Temporal (s_t -> s_t+k)",
+    "aux_type": "temporal",
+    "throughput_fps": 4280.0,
+    "train_score": 9.202,
+    "unseen_score": 8.311,
+    "unseen_std": 2.328,
+    "seed_unseen_std": 0.242,
+    "final_aux_loss": 2.2158,
+    "runs": [
+      {
+        "seed": 0,
+        "fps": 4228.805982766228,
+        "elapsed": 709.0114827156067,
+        "steps": 2998272,
+        "train": 9.475000381469727,
+        "train_std": 2.161452293395996,
+        "unseen": 8.553125381469727,
+        "unseen_std": 2.3380661010742188,
+        "final_aux_loss": 2.1776134967803955
+      },
+      {
+        "seed": 1,
+        "fps": 4331.990170571164,
+        "elapsed": 692.1234540939331,
+        "steps": 2998272,
+        "train": 8.928125381469727,
+        "train_std": 2.355543613433838,
+        "unseen": 8.068750381469727,
+        "unseen_std": 2.3181943893432617,
+        "final_aux_loss": 2.253997564315796
+      }
+    ]
   },
-  "Action_Conditional_ACL": {
-    "tipo": "Causal / A\u00e7\u00e3o (s_t, a_t -> s_{t+1})",
-    "unseen_score": 0.238,
-    "throughput_fps": 1671.0,
-    "loss": 3.4657,
-    "convergencia": "Supera Spatial em ambientes control\u00e1veis"
+  "Action_ACL": {
+    "tipo": "Causal (s_t,a_t -> s_t+1)",
+    "aux_type": "action",
+    "throughput_fps": 4246.0,
+    "train_score": 8.717,
+    "unseen_score": 8.155,
+    "unseen_std": 2.561,
+    "seed_unseen_std": 0.055,
+    "final_aux_loss": 2.6086,
+    "runs": [
+      {
+        "seed": 0,
+        "fps": 4244.948022303822,
+        "elapsed": 706.3153622150421,
+        "steps": 2998272,
+        "train": 8.193750381469727,
+        "train_std": 2.473097562789917,
+        "unseen": 8.209375381469727,
+        "unseen_std": 2.424595355987549,
+        "final_aux_loss": 2.588346481323242
+      },
+      {
+        "seed": 1,
+        "fps": 4247.525042246091,
+        "elapsed": 705.8868329524994,
+        "steps": 2998272,
+        "train": 9.240625381469727,
+        "train_std": 2.207000255584717,
+        "unseen": 8.100000381469727,
+        "unseen_std": 2.6983792781829834,
+        "final_aux_loss": 2.6288368701934814
+      }
+    ]
   },
   "Self_Predictive_SPR": {
-    "tipo": "Auto-Preditivo N\u00e3o-Contrastivo (BYOL)",
-    "unseen_score": 0.245,
-    "throughput_fps": 1919.0,
-    "loss": 1.0,
-    "convergencia": "Campe\u00e3o Geral: sem ru\u00eddo de negativos"
+    "tipo": "Auto-preditivo (BYOL, sem negativos)",
+    "aux_type": "spr",
+    "throughput_fps": 4306.0,
+    "train_score": 8.413,
+    "unseen_score": 7.483,
+    "unseen_std": 2.445,
+    "seed_unseen_std": 0.195,
+    "final_aux_loss": 0.1162,
+    "runs": [
+      {
+        "seed": 0,
+        "fps": 4309.722229052591,
+        "elapsed": 695.6995928287506,
+        "steps": 2998272,
+        "train": 8.615625381469727,
+        "train_std": 2.2912347316741943,
+        "unseen": 7.287500381469727,
+        "unseen_std": 2.403610944747925,
+        "final_aux_loss": 0.1117280125617981
+      },
+      {
+        "seed": 1,
+        "fps": 4302.330452387601,
+        "elapsed": 696.8948650360107,
+        "steps": 2998272,
+        "train": 8.209375381469727,
+        "train_std": 2.450237274169922,
+        "unseen": 7.678125381469727,
+        "unseen_std": 2.486241579055786,
+        "final_aux_loss": 0.12069463729858398
+      }
+    ]
   }
 }

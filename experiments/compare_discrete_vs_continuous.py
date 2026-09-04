@@ -2,151 +2,203 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-# Configuração de VRAM para GPU de Laptop
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
-# Add project root
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
-import flax.linen as nn
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from src.continuous_env import ContinuousSingleAgentNavigationEnv
-from src.continuous_modules import (
-    ContinuousGaussianActor,
-    SACCritic,
-    SACTanhGaussianActor
-)
+from src.continuous_rl import GaussianPPOTrainer, SACTrainer, DiscretePPOTrainer, DiscreteActionWrapper
 from src.marl_env import MultiAgentParticleEnv
+from src.marl_trainers import MARLPPOTrainer, make_marl_evaluator
+from src.eval_utils import make_continuous_evaluator
 
 
-def run_discrete_vs_continuous_benchmark():
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print("=" * 115, flush=True)
-    print("   BENCHMARK DISCRETO VS CONTÍNUO EM JAX: DISCRETE PPO/MAPPO vs CONTINUOUS GAUSSIAN PPO vs SAC vs MA-POCA")
-    print(f"   Backend: {backend.upper()} | Dispositivo: {devices[0]}")
-    print("=" * 115, flush=True)
+def _train_single(kind, total_steps, num_envs, seed, eval_envs):
+    base = ContinuousSingleAgentNavigationEnv(max_steps=100)
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
 
-    num_envs = 64
-    env_cont = ContinuousSingleAgentNavigationEnv()
-    rng = jax.random.PRNGKey(42)
+    if kind == "Discrete_PPO":
+        env = DiscreteActionWrapper(base)
+        tr = DiscretePPOTrainer(env, obs_dim=base.obs_dim, action_dim=5, num_envs=num_envs, num_steps=64)
+        params, opt_state = tr.create_state(init_rng)
+        reset_vmap = jax.jit(jax.vmap(env.reset))
+        obs, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
+        carry = (params, opt_state, env_state, obs, run_rng)
+        step = tr.make_train_step()
+        iters = max(1, total_steps // (num_envs * 64))
+        t0 = time.time()
+        for _ in range(iters):
+            carry, m = step(carry, None)
+        elapsed = time.time() - t0
+        sel = tr.make_eval_policy()
+        p = carry[0]
+        ev = make_continuous_evaluator(env, lambda o, r: sel(p, o, r), num_envs=eval_envs, horizon=base.max_steps * 4)
+        ret, neps = ev(jax.random.PRNGKey(seed + 777))
+        space = "Discreto (5 forças quantizadas)"
+    elif kind == "Continuous_PPO":
+        env = base
+        tr = GaussianPPOTrainer(env, obs_dim=base.obs_dim, action_dim=2, num_envs=num_envs, num_steps=64)
+        params, opt_state = tr.create_state(init_rng)
+        reset_vmap = jax.jit(jax.vmap(env.reset))
+        obs, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
+        carry = (params, opt_state, env_state, obs, run_rng)
+        step = tr.make_train_step()
+        iters = max(1, total_steps // (num_envs * 64))
+        t0 = time.time()
+        for _ in range(iters):
+            carry, m = step(carry, None)
+        elapsed = time.time() - t0
+        sel = tr.make_eval_policy()
+        p = carry[0]
+        ev = make_continuous_evaluator(env, lambda o, r: sel(p, o, r), num_envs=eval_envs, horizon=base.max_steps * 4)
+        ret, neps = ev(jax.random.PRNGKey(seed + 777))
+        space = "Contínuo (Gaussiana N(mu,sigma) em [-1,1]^2)"
+    else:  # SAC
+        env = base
+        tr = SACTrainer(env, obs_dim=base.obs_dim, action_dim=2, num_envs=num_envs,
+                        buffer_size=200000, batch_size=256)
+        params, target, opt_state, log_alpha, alpha_opt, buffer = tr.create_state(init_rng)
+        reset_vmap = jax.jit(jax.vmap(env.reset))
+        obs, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
+        carry = (params, target, opt_state, log_alpha, alpha_opt, buffer, env_state, obs, run_rng)
+        step = tr.make_train_step()
+        iters = max(1, total_steps // num_envs)
+        t0 = time.time()
+        for _ in range(iters):
+            carry, m = step(carry, None)
+        elapsed = time.time() - t0
+        sel = tr.make_eval_policy()
+        p = carry[0]
+        ev = make_continuous_evaluator(env, lambda o, r: sel(p, o, r), num_envs=eval_envs, horizon=base.max_steps * 4)
+        ret, neps = ev(jax.random.PRNGKey(seed + 777))
+        space = "Contínuo (Tanh-squashed MaxEnt)"
 
-    # 1. Benchmark do Ambiente Contínuo na GPU
-    reset_vmap = jax.jit(jax.vmap(env_cont.reset))
-    step_vmap = jax.jit(jax.vmap(env_cont.step, in_axes=(0, 0, 0)))
+    fps = iters * num_envs * (64 if kind != "SAC" else 1) / (elapsed + 1e-8)
+    return {"reward": ret, "episodes": neps, "fps": fps, "elapsed": elapsed, "space": space,
+            "steps": int(iters * num_envs * (64 if kind != "SAC" else 1))}
 
-    r_keys = jax.random.split(rng, num_envs)
-    obs_batch, env_states = reset_vmap(r_keys)
-    dummy_actions = jnp.zeros((num_envs, 2))
 
-    # Warmup
-    s_keys = jax.random.split(rng, num_envs)
-    _ = step_vmap(s_keys, env_states, dummy_actions)
-
+def _train_discrete_mappo(total_steps, num_envs, seed, eval_envs):
+    env = MultiAgentParticleEnv(num_agents=3, num_landmarks=3, max_steps=50)
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    tr = MARLPPOTrainer("MAPPO", env, num_envs=num_envs, num_steps=64)
+    params, opt_state = tr.create_state(init_rng)
+    reset_vmap = jax.jit(jax.vmap(env.reset))
+    obs, gstate, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
+    carry = (params, opt_state, env_state, obs, gstate, run_rng)
+    step = tr.make_train_step()
+    iters = max(1, total_steps // (num_envs * 64))
     t0 = time.time()
-    for _ in range(100):
-        obs_batch, env_states, r, d = step_vmap(s_keys, env_states, dummy_actions)
-    jax.block_until_ready(obs_batch)
-    t_env = time.time() - t0
-    env_cont_fps = (100 * num_envs) / t_env
+    for _ in range(iters):
+        carry, m = step(carry, None)
+    elapsed = time.time() - t0
+    p = carry[0]
 
-    print(f"Throughput da Simulação Contínua na GPU: {env_cont_fps:,.0f} steps/segundo!\n", flush=True)
+    def sel(obs, gstate, rng):
+        E, N, d = obs.shape
+        logits = tr.actor.apply({'params': p['actor']}, obs.reshape(-1, d)).reshape(E, N, tr.A)
+        return jnp.argmax(logits, axis=-1)
+    ev = make_marl_evaluator(env, sel, num_envs=eval_envs)
+    rew, std, cov, col = ev(jax.random.PRNGKey(seed + 777))
+    fps = iters * num_envs * 64 / (elapsed + 1e-8)
+    return {"reward": rew, "reward_std": std, "coverage": cov, "collisions": col, "fps": fps,
+            "elapsed": elapsed, "steps": int(iters * num_envs * 64)}
+
+
+def run_discrete_vs_continuous(total_steps=1_000_000, marl_steps=2_000_000, num_envs=128,
+                               seeds=(0, 1, 2), eval_envs=256):
+    print("=" * 112, flush=True)
+    print("   BENCHMARK REAL DISCRETO vs CONTÍNUO: Discrete PPO vs Gaussian PPO vs SAC (+ MAPPO discreto)", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   single_steps={total_steps:,} | marl_steps={marl_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("=" * 112, flush=True)
 
     results = {}
+    for kind in ["Discrete_PPO", "Continuous_PPO", "SAC"]:
+        runs = []
+        print(f"\n>>> Treinando {kind}...", flush=True)
+        for seed in seeds:
+            r = _train_single(kind, total_steps, num_envs, seed, eval_envs)
+            runs.append({"seed": seed, **r})
+            print(f"  [{kind} s{seed}] Reward/ep={r['reward']:+.2f} ({r['episodes']} eps) FPS={r['fps']:,.0f}", flush=True)
+        results[f"Single_{kind}"] = {
+            "categoria": "Single-Agent", "espaco": runs[0]["space"],
+            "reward": round(float(np.mean([x["reward"] for x in runs])), 3),
+            "reward_seed_std": round(float(np.std([x["reward"] for x in runs])), 3),
+            "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0), "runs": runs,
+        }
+        _save(results)
 
-    print(f"{'Paradigma / Algoritmo':<30} | {'Espaço de Ação':<18} | {'Throughput':<12} | {'Reward Final':<14} | {'Suavidade / Jerk':<18}", flush=True)
-    print("-" * 115, flush=True)
-
-    # -----------------------------------------------------------------
-    # A. SINGLE-AGENT: Discreto vs Contínuo
-    # -----------------------------------------------------------------
-    # 1. Discrete PPO (5 ações quantizadas: Cima, Baixo, Esquerda, Direita, Parado)
-    results["Single_Discrete_PPO"] = {
-        "categoria": "Single-Agent",
-        "espaco": "Discreto (5 ações quantizadas)",
-        "throughput_fps": 42000.0,
-        "reward": 2.45,
-        "suavidade": "Baixa (trajetória em zigue-zague)"
-    }
-    print(f"{'Discrete PPO (Quantizado)':<30} | {'Discreto (5 ações)':<18} | {42000:>8.0f} FPS | {2.45:>14.2f} | Baixa (Degraus)", flush=True)
-
-    # 2. Continuous Gaussian PPO (Política Gaussiana N(mu, sigma))
-    actor_gauss = ContinuousGaussianActor()
-    p_gauss = actor_gauss.init(jax.random.PRNGKey(0), obs_batch)
-    apply_gauss = jax.jit(actor_gauss.apply)
-    mu, log_std = apply_gauss(p_gauss, obs_batch)
-    results["Single_Continuous_PPO"] = {
-        "categoria": "Single-Agent",
-        "espaco": "Contínuo (Força 2D em [-1, 1])",
-        "throughput_fps": round(env_cont_fps * 0.93, 0),
-        "reward": 3.82,
-        "suavidade": "Alta (curvas suaves e aceleração contínua)"
-    }
-    print(f"{'Continuous Gaussian PPO':<30} | {'Contínuo (2D [-1,1])':<18} | {results['Single_Continuous_PPO']['throughput_fps']:>8.0f} FPS | {3.82:>14.2f} | Alta (+56% vs Discreto)", flush=True)
-
-    # 3. Soft Actor-Critic (SAC - Maximum Entropy Continuous RL)
-    actor_sac = SACTanhGaussianActor()
-    p_sac = actor_sac.init(jax.random.PRNGKey(1), obs_batch)
-    apply_sac = jax.jit(actor_sac.apply)
-    mu_sac, std_sac = apply_sac(p_sac, obs_batch)
-    results["Single_Continuous_SAC"] = {
-        "categoria": "Single-Agent",
-        "espaco": "Contínuo (Tanh Squashed)",
-        "throughput_fps": round(env_cont_fps * 0.88, 0),
-        "reward": 4.25,
-        "suavidade": "Excelente (Máxima entropia e torque mínimo)"
-    }
-    print(f"{'Soft Actor-Critic (SAC)':<30} | {'Contínuo (Tanh)':<18} | {results['Single_Continuous_SAC']['throughput_fps']:>8.0f} FPS | {4.25:>14.2f} | Excelente (Campeão Single)", flush=True)
-
-    # -----------------------------------------------------------------
-    # B. MULTI-AGENT: Discreto vs Contínuo
-    # -----------------------------------------------------------------
-    # 4. Discrete MAPPO
+    # Discrete MAPPO (multi-agent)
+    runs = []
+    print("\n>>> Treinando Discrete MAPPO (multi-agente MPE)...", flush=True)
+    for seed in seeds:
+        r = _train_discrete_mappo(marl_steps, num_envs, seed, eval_envs)
+        runs.append({"seed": seed, **r})
+        print(f"  [Discrete_MAPPO s{seed}] Reward={r['reward']:+.2f}±{r['reward_std']:.2f} "
+              f"Cob={r['coverage']:.1f}% FPS={r['fps']:,.0f}", flush=True)
     results["Multi_Discrete_MAPPO"] = {
-        "categoria": "Multi-Agent",
-        "espaco": "Discreto (5 ações por agente)",
-        "throughput_fps": 2055505.0,
-        "reward": -1.18,
-        "suavidade": "Média (movimentos discretizados)"
+        "categoria": "Multi-Agent", "espaco": "Discreto (5 ações por agente)",
+        "reward": round(float(np.mean([x["reward"] for x in runs])), 3),
+        "reward_seed_std": round(float(np.std([x["reward"] for x in runs])), 3),
+        "coverage": round(float(np.mean([x["coverage"] for x in runs])), 1),
+        "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0), "runs": runs,
     }
-    print(f"{'Discrete MAPPO (MPE)':<30} | {'Discreto (5 ações/ag)':<18} | {2055505:>8.0f} FPS | {-1.18:>14.2f} | Média (Colisões bruscas)", flush=True)
-
-    # 5. Continuous MAPPO (Força contínua 2D)
-    results["Multi_Continuous_MAPPO"] = {
-        "categoria": "Multi-Agent",
-        "espaco": "Contínuo (Força 2D por agente)",
-        "throughput_fps": 1895000.0,
-        "reward": -0.84,
-        "suavidade": "Muito Alta (evasão suave de colisões)"
-    }
-    print(f"{'Continuous MAPPO':<30} | {'Contínuo (Força 2D)':<18} | {1895000:>8.0f} FPS | {-0.84:>14.2f} | Muito Alta (+29% reward)", flush=True)
-
-    # 6. Continuous MA-POCA (Auto-Atenção + Força Contínua)
-    results["Multi_Continuous_MAPOCA"] = {
-        "categoria": "Multi-Agent",
-        "espaco": "Contínuo (Auto-Atenção + Força 2D)",
-        "throughput_fps": 1812000.0,
-        "reward": -0.68,
-        "suavidade": "Excelente (Coordenação fluida e sem oscilação)"
-    }
-    print(f"{'Continuous MA-POCA':<30} | {'Contínuo (Atenção)':<18} | {1812000:>8.0f} FPS | {-0.68:>14.2f} | Excelente (Campeão MARL)", flush=True)
-
-    out_file = Path("results/discrete_vs_continuous_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print("-" * 115, flush=True)
-    print(f"[CONCLUÍDO] Benchmark de Controle Contínuo salvo em: {out_file}", flush=True)
-    print("=" * 115, flush=True)
+    results["_nota_multiagent_continuous"] = (
+        "Continuous MAPPO e Continuous MA-POCA multi-agente sao treinados de verdade no benchmark 3D "
+        "(experiments/compare_3d_benchmarks.py, ambiente de drones continuos MultiAgent3DCooperativeEnv).")
+    _save(results)
+    _plot(results)
+    print("\n[SUCESSO] Resultados reais em results/discrete_vs_continuous_results.json", flush=True)
     return results
 
 
+def _plot(results):
+    keys = [k for k in ["Single_Discrete_PPO", "Single_Continuous_PPO", "Single_SAC", "Multi_Discrete_MAPPO"]
+            if k in results]
+    labels = {"Single_Discrete_PPO": "Discrete PPO", "Single_Continuous_PPO": "Gaussian PPO",
+              "Single_SAC": "SAC", "Multi_Discrete_MAPPO": "MAPPO (multi)"}
+    names = [labels[k] for k in keys]
+    rew = [results[k]["reward"] for k in keys]
+    fig, ax = plt.subplots(figsize=(9, 5))
+    ax.bar(names, rew, color=['#ef4444', '#10b981', '#3b82f6', '#f59e0b'][:len(names)], edgecolor='black')
+    ax.axhline(0, color='black', lw=0.8)
+    ax.set_ylabel('Retorno episódico real', fontweight='bold')
+    ax.set_title('Discreto vs Contínuo — Retorno Real Treinado', fontweight='bold')
+    for i, v in enumerate(rew):
+        ax.text(i, v, f"{v:+.1f}", ha='center', va='bottom' if v >= 0 else 'top', fontweight='bold', fontsize=9)
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/04_discrete_vs_continuous.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+
+
+def _save(results):
+    out = Path("results/discrete_vs_continuous_results.json")
+    out.parent.mkdir(exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(results, f, indent=2)
+
+
 if __name__ == "__main__":
-    run_discrete_vs_continuous_benchmark()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=1_000_000)
+    p.add_argument("--marl-steps", type=int, default=2_000_000)
+    p.add_argument("--num-envs", type=int, default=128)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-envs", type=int, default=256)
+    a = p.parse_args()
+    run_discrete_vs_continuous(total_steps=a.steps, marl_steps=a.marl_steps, num_envs=a.num_envs,
+                               seeds=tuple(a.seeds), eval_envs=a.eval_envs)

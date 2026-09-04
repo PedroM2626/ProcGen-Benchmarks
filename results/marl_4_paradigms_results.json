@@ -1,62 +1,222 @@
-{
-  "CTDE_MAPOCA": {
-    "id": "CTDE_MAPOCA",
-    "nome": "CTDE (MA-POCA)",
+[
+  {
+    "id": "CTDE",
+    "nome": "CTDE (MA-POCA / MAPPO)",
     "familia": "Policy-Based CTDE",
-    "execucao": "Descentralizada (Zero Comunica\u00e7\u00e3o)",
-    "banda_bytes": 0,
-    "complexidade_acoes": "Linear O(N * |A|)",
-    "reward_clear": -0.68,
-    "cobertura_clear": 96.8,
-    "reward_fog": -1.35,
-    "cobertura_fog": 78.5,
-    "fps": 1812000,
-    "diagnostico": "Excelente e leve em vis\u00e3o limpa. Sob nevoeiro, sofre por n\u00e3o poder compartilhar vis\u00e3o.",
-    "degradacao_nevoeiro_pct": -98.5
+    "reward_clear": -75.16,
+    "reward_clear_std": 0.75,
+    "cobertura_clear": 27.7,
+    "colisoes_clear": 1.03,
+    "fps_clear": 213344.0,
+    "runs_clear": [
+      {
+        "seed": 0,
+        "reward": -75.90444946289062,
+        "reward_std": 26.417884826660156,
+        "coverage": 27.544263005256653,
+        "collisions": 1.0302343368530273,
+        "fps": 125679.58819228855,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -74.4110336303711,
+        "reward_std": 22.33409309387207,
+        "coverage": 27.91144847869873,
+        "collisions": 1.0266406536102295,
+        "fps": 301007.72599346587,
+        "steps": 1998848
+      }
+    ],
+    "reward_fog": -124.84,
+    "reward_fog_std": 37.65,
+    "cobertura_fog": 23.6,
+    "colisoes_fog": 1.49,
+    "fps_fog": 258301.0,
+    "runs_fog": [
+      {
+        "seed": 0,
+        "reward": -162.4852752685547,
+        "reward_std": 54.2190055847168,
+        "coverage": 24.164055287837982,
+        "collisions": 2.500312328338623,
+        "fps": 302727.332273953,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -87.18585205078125,
+        "reward_std": 31.26766014099121,
+        "coverage": 23.0025976896286,
+        "collisions": 0.4701562523841858,
+        "fps": 213874.51952067696,
+        "steps": 1998848
+      }
+    ]
   },
-  "ValueDecomposition_QMIX": {
-    "id": "ValueDecomposition_QMIX",
+  {
+    "id": "ValueDecomp",
     "nome": "Value Decomposition (QMIX)",
     "familia": "Value-Based Monotonic",
-    "execucao": "Descentralizada (Argmax Q_i)",
-    "banda_bytes": 0,
-    "complexidade_acoes": "Linear O(N * |A|)",
-    "reward_clear": -0.82,
-    "cobertura_clear": 93.2,
-    "reward_fog": -1.58,
-    "cobertura_fog": 72.4,
-    "fps": 1950000,
-    "diagnostico": "R\u00e1pido e sample-efficient. Degrada sob nevoeiro e restri\u00e7\u00e3o de monotonicidade.",
-    "degradacao_nevoeiro_pct": -92.7
+    "reward_clear": -109.54,
+    "reward_clear_std": 17.93,
+    "cobertura_clear": 6.8,
+    "colisoes_clear": 0.13,
+    "fps_clear": 113475.0,
+    "runs_clear": [
+      {
+        "seed": 0,
+        "reward": -127.47467041015625,
+        "reward_std": 26.07475471496582,
+        "coverage": 3.072916343808174,
+        "collisions": 0.1326562464237213,
+        "fps": 110976.78201857289,
+        "steps": 2000000
+      },
+      {
+        "seed": 1,
+        "reward": -91.61128234863281,
+        "reward_std": 25.14350128173828,
+        "coverage": 10.559894144535065,
+        "collisions": 0.13195312023162842,
+        "fps": 115974.07610297854,
+        "steps": 2000000
+      }
+    ],
+    "reward_fog": -91.53,
+    "reward_fog_std": 1.3,
+    "cobertura_fog": 7.5,
+    "colisoes_fog": 0.01,
+    "fps_fog": 126257.0,
+    "runs_fog": [
+      {
+        "seed": 0,
+        "reward": -90.23681640625,
+        "reward_std": 19.267152786254883,
+        "coverage": 8.028644323348999,
+        "collisions": 0.016171874478459358,
+        "fps": 137194.02384156713,
+        "steps": 2000000
+      },
+      {
+        "seed": 1,
+        "reward": -92.82730102539062,
+        "reward_std": 21.994152069091797,
+        "coverage": 6.932290643453598,
+        "collisions": 0.009687500074505806,
+        "fps": 115320.7051809598,
+        "steps": 2000000
+      }
+    ]
   },
-  "Centralized_CTE": {
-    "id": "Centralized_CTE",
-    "nome": "Centralized Joint Controller (CTE)",
+  {
+    "id": "CTE",
+    "nome": "Centralized Joint (CTE)",
     "familia": "Centralized Super-Agent",
-    "execucao": "Centralizada (Requer Link Cont\u00ednuo 100%)",
-    "banda_bytes": 128,
-    "complexidade_acoes": "Exponencial O(|A|^N)",
-    "reward_clear": -0.74,
-    "cobertura_clear": 94.8,
-    "reward_fog": -1.48,
-    "cobertura_fog": 74.0,
-    "fps": 920000,
-    "diagnostico": "Sofre da maldi\u00e7\u00e3o da dimensionalidade (|A|^N). Se o link cair, todo o sistema para.",
-    "degradacao_nevoeiro_pct": -100.0
+    "reward_clear": -66.99,
+    "reward_clear_std": 3.71,
+    "cobertura_clear": 19.8,
+    "colisoes_clear": 0.01,
+    "fps_clear": 322773.0,
+    "runs_clear": [
+      {
+        "seed": 0,
+        "reward": -70.69963073730469,
+        "reward_std": 19.348861694335938,
+        "coverage": 17.77343451976776,
+        "collisions": 0.009531250223517418,
+        "fps": 269575.41993297177,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -63.28340148925781,
+        "reward_std": 16.806190490722656,
+        "coverage": 21.817702054977417,
+        "collisions": 0.015937499701976776,
+        "fps": 375971.33473982324,
+        "steps": 1998848
+      }
+    ],
+    "reward_fog": -84.89,
+    "reward_fog_std": 0.76,
+    "cobertura_fog": 11.3,
+    "colisoes_fog": 0.01,
+    "fps_fog": 320024.0,
+    "runs_fog": [
+      {
+        "seed": 0,
+        "reward": -84.13082885742188,
+        "reward_std": 23.320344924926758,
+        "coverage": 11.606767773628235,
+        "collisions": 0.0053906249813735485,
+        "fps": 371791.6381365845,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -85.65724182128906,
+        "reward_std": 23.946931838989258,
+        "coverage": 11.052079498767853,
+        "collisions": 0.008046874776482582,
+        "fps": 268256.85250862665,
+        "steps": 1998848
+      }
+    ]
   },
-  "Explicit_Communication": {
-    "id": "Explicit_Communication",
-    "nome": "Explicit Communication (TarMAC / CommNet)",
-    "familia": "Learned Graph Attention Communication",
-    "execucao": "Distribu\u00edda com Mensagens Neurais (GAT)",
-    "banda_bytes": 64,
-    "complexidade_acoes": "Linear O(N * |A|) + GAT",
-    "reward_clear": -0.62,
-    "cobertura_clear": 98.1,
-    "reward_fog": -0.75,
-    "cobertura_fog": 95.4,
-    "fps": 1450000,
-    "diagnostico": "CAMPE\u00c3O ABSOLUTO SOB NEVOEIRO: Agentes criam linguagem neural e compartilham alvos ocultos!",
-    "degradacao_nevoeiro_pct": -21.0
+  {
+    "id": "COMM",
+    "nome": "Explicit Comm (TarMAC / GAT)",
+    "familia": "Graph Attention Messaging",
+    "reward_clear": -79.29,
+    "reward_clear_std": 6.58,
+    "cobertura_clear": 23.1,
+    "colisoes_clear": 0.56,
+    "fps_clear": 298714.0,
+    "runs_clear": [
+      {
+        "seed": 0,
+        "reward": -72.71041870117188,
+        "reward_std": 28.39480972290039,
+        "coverage": 25.567704439163208,
+        "collisions": 0.3186718821525574,
+        "fps": 197057.7522149034,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -85.87921905517578,
+        "reward_std": 26.351848602294922,
+        "coverage": 20.606765151023865,
+        "collisions": 0.7986718416213989,
+        "fps": 400370.0152386914,
+        "steps": 1998848
+      }
+    ],
+    "reward_fog": -129.49,
+    "reward_fog_std": 0.46,
+    "cobertura_fog": 4.5,
+    "colisoes_fog": 0.34,
+    "fps_fog": 378900.0,
+    "runs_fog": [
+      {
+        "seed": 0,
+        "reward": -129.947265625,
+        "reward_std": 36.65233612060547,
+        "coverage": 5.02343624830246,
+        "collisions": 0.34468749165534973,
+        "fps": 380410.8822122904,
+        "steps": 1998848
+      },
+      {
+        "seed": 1,
+        "reward": -129.03366088867188,
+        "reward_std": 32.34083938598633,
+        "coverage": 4.049478471279144,
+        "collisions": 0.3439062535762787,
+        "fps": 377389.28347702685,
+        "steps": 1998848
+      }
+    ]
   }
-}
+]

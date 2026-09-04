@@ -2,144 +2,180 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-# Configuração de VRAM para GPU de Laptop
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
-# Add project root
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
-from flax.training.train_state import TrainState
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from src.marl_env import MultiAgentParticleEnv
-from src.marl import (
-    MARLActor,
-    DecentralizedCritic,
-    CentralizedCritic,
-    MARLQNetwork,
-    QMIXMixingNetwork,
-    vdn_mix,
-    MAPOCACritic
-)
+from src.marl_trainers import MARLPPOTrainer, MARLQTrainer, make_marl_evaluator
 
 
-def run_marl_benchmark():
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print("=" * 105, flush=True)
-    print("   BENCHMARK DE MULTI-AGENT RL (MARL) EM JAX / GPU: IPPO vs MAPPO vs MA-POCA vs VDN vs QMIX")
-    print(f"   Backend: {backend.upper()} | Dispositivo: {devices[0]}")
-    print("=" * 105, flush=True)
+def _ppo_selector(trainer, params):
+    def sel(obs, gstate, rng):
+        E, N, d = obs.shape
+        logits = trainer.actor.apply({'params': params['actor']}, obs.reshape(-1, d)).reshape(E, N, trainer.A)
+        return jnp.argmax(logits, axis=-1)
+    return sel
 
-    num_agents = 3
-    num_landmarks = 3
-    num_envs = 64
-    env = MultiAgentParticleEnv(num_agents=num_agents, num_landmarks=num_landmarks)
 
-    print(f"Configuração do Ambiente Multi-Agente:", flush=True)
-    print(f"  - Agentes Cooperativos: {num_agents}", flush=True)
-    print(f"  - Marcos / Alvos: {num_landmarks}", flush=True)
-    print(f"  - Dimensão de Obs Local: {env.obs_dim} (por agente)", flush=True)
-    print(f"  - Dimensão de Estado Global: {env.global_state_dim} (compartilhado CTDE)", flush=True)
-    print(f"  - Ambientes Vetorizados em Paralelo: {num_envs}", flush=True)
-    print("-" * 105, flush=True)
+def _q_selector(trainer, params):
+    def sel(obs, gstate, rng):
+        E, N, d = obs.shape
+        q = trainer.qnet.apply({'params': params['q']}, obs.reshape(-1, d)).reshape(E, N, trainer.A)
+        return jnp.argmax(q, axis=-1)
+    return sel
 
-    # 1. Benchmark de Throughput da Dinâmica Multi-Agente na GPU
-    rng = jax.random.PRNGKey(42)
-    step_vmap = jax.jit(jax.vmap(env.step, in_axes=(0, 0, 0)))
+
+def train_eval_policy(algo, env, total_steps, num_envs, seed, eval_envs=256):
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
     reset_vmap = jax.jit(jax.vmap(env.reset))
-
-    r_keys = jax.random.split(rng, num_envs)
-    obs_batch, state_batch, env_states = reset_vmap(r_keys)
-    dummy_actions = jnp.zeros((num_envs, num_agents), dtype=jnp.int32)
-
-    # Warmup
-    s_keys = jax.random.split(rng, num_envs)
-    _ = step_vmap(s_keys, env_states, dummy_actions)
+    keys = jax.random.split(run_rng, num_envs)
+    obs, gstate, env_state = reset_vmap(keys)
 
     t0 = time.time()
-    for _ in range(100):
-        obs_batch, state_batch, env_states, r, d = step_vmap(s_keys, env_states, dummy_actions)
-    jax.block_until_ready(obs_batch)
-    t_env = time.time() - t0
-    env_fps = (100 * num_envs * num_agents) / t_env
+    if algo in ("IPPO", "MAPPO", "MAPOCA"):
+        trainer = MARLPPOTrainer(algo, env, num_envs=num_envs, num_steps=64)
+        params, opt_state = trainer.create_state(init_rng)
+        train_step = trainer.make_train_step()
+        carry = (params, opt_state, env_state, obs, gstate, run_rng)
+        per_iter = num_envs * 64
+        iters = max(1, total_steps // per_iter)
+        last = None
+        for it in range(iters):
+            carry, metrics = train_step(carry, None)
+            last = metrics
+            if it % 20 == 0 or it == iters - 1:
+                print(f"    [{algo} s{seed}] it {it}/{iters} loss={float(metrics['loss']):.4f} "
+                      f"team_rew={float(metrics['team_reward']):.3f}", flush=True)
+        params = carry[0]
+        selector = _ppo_selector(trainer, params)
+    else:  # VDN / QMIX
+        trainer = MARLQTrainer(algo, env, num_envs=num_envs, eps_decay_steps=total_steps // 2)
+        params, target, opt_state, buffer = trainer.create_state(init_rng)
+        train_step = trainer.make_train_step()
+        carry = (params, target, opt_state, buffer, env_state, obs, gstate, run_rng)
+        per_iter = num_envs
+        iters = max(1, total_steps // per_iter)
+        last = None
+        for it in range(iters):
+            carry, metrics = train_step(it, carry)
+            last = metrics
+            if it % 2000 == 0 or it == iters - 1:
+                print(f"    [{algo} s{seed}] it {it}/{iters} loss={float(metrics['loss']):.4f} "
+                      f"eps={float(metrics['eps']):.3f} team_rew={float(metrics['team_reward']):.3f}", flush=True)
+        params = carry[0]
+        selector = _q_selector(trainer, params)
 
-    print(f"Throughput da Simulação Multi-Agente (3 agentes × 64 envs): {env_fps:,.0f} Steps/segundo na GPU!\n", flush=True)
+    elapsed = time.time() - t0
+    real_steps = iters * per_iter
+    fps = real_steps / (elapsed + 1e-8)
 
-    # 2. Benchmarks dos 5 Paradigmas MARL
+    eval_fn = make_marl_evaluator(env, selector, num_envs=eval_envs)
+    e_rng = jax.random.PRNGKey(seed + 777)
+    rew, rew_std, cov, col = eval_fn(e_rng)
+    return {"reward": rew, "reward_std": rew_std, "coverage": cov, "collisions": col,
+            "fps": fps, "elapsed": elapsed, "steps": int(real_steps)}
+
+
+def run_marl_benchmark(total_steps=2_000_000, num_envs=64, seeds=(0, 1, 2), eval_envs=256):
+    print("=" * 105, flush=True)
+    print("   BENCHMARK MARL REAL (TREINADO): IPPO vs MAPPO vs VDN vs QMIX vs MA-POCA", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   total_steps={total_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("=" * 105, flush=True)
+
+    env = MultiAgentParticleEnv(num_agents=3, num_landmarks=3, max_steps=50)
+    algos = ["IPPO", "VDN", "MAPPO", "QMIX", "MAPOCA"]
+    labels = {"IPPO": "Descentralizado (Independente)", "VDN": "Fatoração Aditiva Q_tot=ΣQ_i",
+              "MAPPO": "CTDE (Crítico Centralizado)", "QMIX": "Fatoração Monotônica (Hiper-redes)",
+              "MAPOCA": "CTDE + Auto-Atenção + Contrafactual"}
+
     results = {}
-    print(f"{'Algoritmo MARL':<15} | {'Paradigma / Inovação':<38} | {'Throughput':<12} | {'Reward Co-op':<14} | {'Cobertura':<10}", flush=True)
-    print("-" * 105, flush=True)
+    for algo in algos:
+        runs = []
+        print(f"\n>>> Treinando {algo} ({labels[algo]})", flush=True)
+        for seed in seeds:
+            r = train_eval_policy(algo, env, total_steps, num_envs, seed, eval_envs)
+            runs.append({"seed": seed, **r})
+            print(f"  [{algo} s{seed}] Reward={r['reward']:+.2f}±{r['reward_std']:.2f} "
+                  f"Cobertura={r['coverage']:.1f}% Colisões={r['collisions']:.2f} FPS={r['fps']:,.0f}", flush=True)
+        # aggregate
+        import numpy as np
+        results[algo] = {
+            "paradigma": labels[algo],
+            "coop_reward": round(float(np.mean([x["reward"] for x in runs])), 3),
+            "coop_reward_std": round(float(np.mean([x["reward_std"] for x in runs])), 3),
+            "seed_reward_std": round(float(np.std([x["reward"] for x in runs])), 3),
+            "cobertura_alvos": round(float(np.mean([x["coverage"] for x in runs])), 1),
+            "colisoes": round(float(np.mean([x["collisions"] for x in runs])), 3),
+            "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0),
+            "runs": runs,
+        }
+        out = Path("results/marl_benchmark_results.json")
+        out.parent.mkdir(exist_ok=True)
+        with open(out, "w") as f:
+            json.dump(results, f, indent=2)
 
-    # A. IPPO (Independent PPO)
-    results["IPPO"] = {
-        "paradigma": "Descentralizado (Independente)",
-        "throughput_fps": round(env_fps * 0.94, 0),
-        "coop_reward": -2.41,
-        "cobertura_alvos": "68.5%",
-        "estabilidade": "Média (sofre com ambiente não-estacionário)"
-    }
-    print(f"{'IPPO':<15} | {'Descentralizado Total (Independente)':<38} | {results['IPPO']['throughput_fps']:>8.0f} FPS | {results['IPPO']['coop_reward']:>14.2f} | 68.5%", flush=True)
-
-    # B. MAPPO (Multi-Agent PPO com CTDE)
-    results["MAPPO"] = {
-        "paradigma": "CTDE (Crítico Centralizado MLP)",
-        "throughput_fps": round(env_fps * 0.91, 0),
-        "coop_reward": -1.18,
-        "cobertura_alvos": "92.4%",
-        "estabilidade": "Alta (CTDE elimina não-estacionariedade)"
-    }
-    print(f"{'MAPPO':<15} | {'CTDE (Crítico Centralizado MLP)':<38} | {results['MAPPO']['throughput_fps']:>8.0f} FPS | {results['MAPPO']['coop_reward']:>14.2f} | 92.4%", flush=True)
-
-    # C. MA-POCA (Multi-Agent POsthumous Credit Assignment com Auto-Atenção)
-    poca_critic = MAPOCACritic()
-    p_poca = poca_critic.init(jax.random.PRNGKey(3), obs_batch)
-    poca_apply = jax.jit(poca_critic.apply)
-    _ = poca_apply(p_poca, obs_batch)
-    results["MA-POCA"] = {
-        "paradigma": "CTDE + Auto-Atenção + Baseline Contrafactual",
-        "throughput_fps": round(env_fps * 0.86, 0),
-        "coop_reward": -0.98,
-        "cobertura_alvos": "96.8%",
-        "estabilidade": "Excelente (Resolve Credit Assignment e Lazy Agent)"
-    }
-    print(f"{'MA-POCA':<15} | {'CTDE + Auto-Atenção + Contrafactual':<38} | {results['MA-POCA']['throughput_fps']:>8.0f} FPS | {results['MA-POCA']['coop_reward']:>14.2f} | 96.8% (Líder Policy)", flush=True)
-
-    # D. VDN (Value-Decomposition Networks)
-    results["VDN"] = {
-        "paradigma": "Fatoração Aditiva Q_tot = sum(Qi)",
-        "throughput_fps": round(env_fps * 0.96, 0),
-        "coop_reward": -1.85,
-        "cobertura_alvos": "79.2%",
-        "estabilidade": "Média-Alta (Restrita a aditividade linear)"
-    }
-    print(f"{'VDN':<15} | {'Fatoração Aditiva Linear Q_tot = sum(Qi)':<38} | {results['VDN']['throughput_fps']:>8.0f} FPS | {results['VDN']['coop_reward']:>14.2f} | 79.2%", flush=True)
-
-    # E. QMIX (Monotonic Value Mixing via Hypernetworks)
-    results["QMIX"] = {
-        "paradigma": "Fatoração Monotônica com Hiper-redes",
-        "throughput_fps": round(env_fps * 0.88, 0),
-        "coop_reward": -1.09,
-        "cobertura_alvos": "95.1%",
-        "estabilidade": "Muito Alta (Campeão Value-based)"
-    }
-    print(f"{'QMIX':<15} | {'Fatoração Monotônica Hiper-rede':<38} | {results['QMIX']['throughput_fps']:>8.0f} FPS | {results['QMIX']['coop_reward']:>14.2f} | 95.1% (Líder Value)", flush=True)
-
-    out_file = Path("results/marl_benchmark_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-
+    print("\n" + "=" * 95, flush=True)
+    print(f"{'Algoritmo':<10} | {'Reward Co-op':<18} | {'Cobertura':<10} | {'Colisões':<10} | {'FPS':<12}", flush=True)
     print("-" * 95, flush=True)
-    print(f"[CONCLUÍDO COM SUCESSO] Resultados de MARL salvos em: {out_file}", flush=True)
+    for algo in algos:
+        r = results[algo]
+        print(f"{algo:<10} | {r['coop_reward']:>+7.2f}±{r['seed_reward_std']:<5.2f}   | "
+              f"{r['cobertura_alvos']:>7.1f}% | {r['colisoes']:>8.2f} | {r['throughput_fps']:>10,.0f}", flush=True)
     print("=" * 95, flush=True)
+    print("[CONCLUÍDO] Resultados MARL reais salvos em results/marl_benchmark_results.json", flush=True)
+    _plot(results)
     return results
 
 
+def _plot(results):
+    order = ["IPPO", "VDN", "MAPPO", "QMIX", "MAPOCA"]
+    names = [a for a in order if a in results]
+    rew = [results[a]["coop_reward"] for a in names]
+    cov = [results[a]["cobertura_alvos"] for a in names]
+    import numpy as _np
+    x = _np.arange(len(names)); w = 0.38
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    ax1.bar(x, rew, w, color='#0284c7', edgecolor='black')
+    ax1.set_xticks(x); ax1.set_xticklabels(names, fontweight='bold')
+    ax1.set_ylabel('Recompensa cooperativa (episódio)', fontweight='bold')
+    ax1.set_title('MARL — Recompensa Real Treinada', fontweight='bold'); ax1.axhline(0, color='k', lw=0.8)
+    ax2.bar(x, cov, w, color='#10b981', edgecolor='black')
+    ax2.set_xticks(x); ax2.set_xticklabels(names, fontweight='bold')
+    ax2.set_ylabel('Cobertura de alvos (%)', fontweight='bold'); ax2.set_ylim(0, 105)
+    ax2.set_title('MARL — Cobertura Real Treinada', fontweight='bold')
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/03_marl_benchmarks.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+
+
+def _plot_only():
+    with open(Path("results/marl_benchmark_results.json")) as f:
+        _plot(json.load(f))
+    print("[OK] Figura real regenerada em figures/03_marl_benchmarks.png", flush=True)
+
+
 if __name__ == "__main__":
-    run_marl_benchmark()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=2_000_000)
+    p.add_argument("--num-envs", type=int, default=64)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-envs", type=int, default=256)
+    p.add_argument("--plot-only", action="store_true")
+    a = p.parse_args()
+    if a.plot_only:
+        _plot_only()
+    else:
+        run_marl_benchmark(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds), eval_envs=a.eval_envs)

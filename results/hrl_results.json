@@ -1,90 +1,154 @@
 {
   "flat": [
     {
-      "seed": 42,
+      "seed": 0,
       "mode": "flat",
-      "steps": 49984,
-      "elapsed_sec": 40.52,
-      "fps": 1233.5,
-      "train_score": 0.0,
-      "unseen_score": 0.0,
-      "gen_gap": 0.0
+      "steps": 7995392,
+      "elapsed_sec": 406.6,
+      "fps": 19664.1,
+      "train_score": 9.811,
+      "train_std": 2.84,
+      "unseen_score": 9.061,
+      "unseen_std": 2.702,
+      "gen_gap": 0.75
     },
     {
-      "seed": 123,
+      "seed": 1,
       "mode": "flat",
-      "steps": 49984,
-      "elapsed_sec": 42.69,
-      "fps": 1170.8,
-      "train_score": 0.016,
-      "unseen_score": 0.016,
-      "gen_gap": 0.0
+      "steps": 7995392,
+      "elapsed_sec": 399.14,
+      "fps": 20031.7,
+      "train_score": 9.553,
+      "train_std": 2.561,
+      "unseen_score": 9.327,
+      "unseen_std": 2.921,
+      "gen_gap": 0.227
+    },
+    {
+      "seed": 2,
+      "mode": "flat",
+      "steps": 7995392,
+      "elapsed_sec": 411.87,
+      "fps": 19412.3,
+      "train_score": 9.842,
+      "train_std": 2.415,
+      "unseen_score": 9.163,
+      "unseen_std": 2.907,
+      "gen_gap": 0.68
     }
   ],
   "skip4": [
     {
-      "seed": 42,
+      "seed": 0,
       "mode": "skip4",
-      "steps": 49920,
-      "elapsed_sec": 88.14,
-      "fps": 566.4,
-      "train_score": 0.031,
-      "unseen_score": 0.0,
-      "gen_gap": 0.031
+      "steps": 7995392,
+      "elapsed_sec": 443.03,
+      "fps": 18047.1,
+      "train_score": 4.163,
+      "train_std": 1.55,
+      "unseen_score": 3.991,
+      "unseen_std": 1.572,
+      "gen_gap": 0.172
     },
     {
-      "seed": 123,
+      "seed": 1,
       "mode": "skip4",
-      "steps": 49920,
-      "elapsed_sec": 82.56,
-      "fps": 604.7,
-      "train_score": 0.031,
-      "unseen_score": 0.031,
-      "gen_gap": 0.0
+      "steps": 7995392,
+      "elapsed_sec": 431.41,
+      "fps": 18533.3,
+      "train_score": 4.764,
+      "train_std": 1.602,
+      "unseen_score": 4.639,
+      "unseen_std": 1.723,
+      "gen_gap": 0.125
+    },
+    {
+      "seed": 2,
+      "mode": "skip4",
+      "steps": 7995392,
+      "elapsed_sec": 448.51,
+      "fps": 17826.4,
+      "train_score": 4.647,
+      "train_std": 1.441,
+      "unseen_score": 4.311,
+      "unseen_std": 1.766,
+      "gen_gap": 0.336
     }
   ],
   "hrl": [
     {
-      "seed": 42,
+      "seed": 0,
       "mode": "hrl",
-      "steps": 49920,
-      "elapsed_sec": 85.86,
-      "fps": 581.4,
-      "train_score": 0.125,
-      "unseen_score": 0.031,
-      "gen_gap": 0.094
+      "steps": 7995392,
+      "elapsed_sec": 434.21,
+      "fps": 18413.6,
+      "train_score": 2.881,
+      "train_std": 1.045,
+      "unseen_score": 2.928,
+      "unseen_std": 1.069,
+      "gen_gap": -0.047
     },
     {
-      "seed": 123,
+      "seed": 1,
       "mode": "hrl",
-      "steps": 49920,
-      "elapsed_sec": 82.03,
-      "fps": 608.6,
-      "train_score": 0.125,
-      "unseen_score": 0.094,
-      "gen_gap": 0.031
+      "steps": 7995392,
+      "elapsed_sec": 426.14,
+      "fps": 18762.5,
+      "train_score": 2.897,
+      "train_std": 1.127,
+      "unseen_score": 3.006,
+      "unseen_std": 1.064,
+      "gen_gap": -0.109
+    },
+    {
+      "seed": 2,
+      "mode": "hrl",
+      "steps": 7995392,
+      "elapsed_sec": 428.8,
+      "fps": 18646.1,
+      "train_score": 2.803,
+      "train_std": 1.071,
+      "unseen_score": 2.733,
+      "unseen_std": 1.03,
+      "gen_gap": 0.07
     }
   ],
   "hrl_learned": [
     {
-      "seed": 42,
+      "seed": 0,
       "mode": "hrl_learned",
-      "steps": 49920,
-      "elapsed_sec": 84.32,
-      "fps": 592.0,
-      "train_score": 0.047,
-      "unseen_score": 0.047,
-      "gen_gap": 0.0
+      "steps": 7995392,
+      "elapsed_sec": 444.75,
+      "fps": 17977.1,
+      "train_score": 2.748,
+      "train_std": 1.373,
+      "unseen_score": 2.975,
+      "unseen_std": 1.546,
+      "gen_gap": -0.227
     },
     {
-      "seed": 123,
+      "seed": 1,
       "mode": "hrl_learned",
-      "steps": 49920,
-      "elapsed_sec": 81.2,
-      "fps": 614.8,
-      "train_score": 0.031,
-      "unseen_score": 0.156,
-      "gen_gap": -0.125
+      "steps": 7995392,
+      "elapsed_sec": 428.42,
+      "fps": 18662.6,
+      "train_score": 2.811,
+      "train_std": 1.626,
+      "unseen_score": 2.748,
+      "unseen_std": 1.412,
+      "gen_gap": 0.062
+    },
+    {
+      "seed": 2,
+      "mode": "hrl_learned",
+      "steps": 7995392,
+      "elapsed_sec": 669.89,
+      "fps": 11935.4,
+      "train_score": 2.506,
+      "train_std": 1.513,
+      "unseen_score": 2.584,
+      "unseen_std": 1.431,
+      "gen_gap": -0.078
     }
   ]
 }

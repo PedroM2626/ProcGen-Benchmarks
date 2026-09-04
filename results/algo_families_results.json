@@ -1,68 +1,107 @@
 {
   "PPO": [
     {
-      "seed": 42,
-      "steps": 49152,
-      "elapsed_sec": 17.99,
-      "fps": 2732.1,
-      "train_score": 0.08,
-      "unseen_score": 0.02,
-      "det_score": 0.26,
-      "gen_gap": 0.06
+      "seed": 0,
+      "steps": 7995392,
+      "elapsed_sec": 396.02,
+      "fps": 20189.2,
+      "train_score": 9.725,
+      "train_std": 2.404,
+      "unseen_score": 9.038,
+      "unseen_std": 2.819,
+      "gen_gap": 0.688
     },
     {
-      "seed": 123,
-      "steps": 49152,
-      "elapsed_sec": 12.22,
-      "fps": 4022.7,
-      "train_score": 0.14,
-      "unseen_score": 0.1,
-      "det_score": 0.2,
-      "gen_gap": 0.04
+      "seed": 1,
+      "steps": 7995392,
+      "elapsed_sec": 380.0,
+      "fps": 21040.6,
+      "train_score": 9.577,
+      "train_std": 2.66,
+      "unseen_score": 9.217,
+      "unseen_std": 3.076,
+      "gen_gap": 0.359
+    },
+    {
+      "seed": 2,
+      "steps": 7995392,
+      "elapsed_sec": 382.58,
+      "fps": 20898.5,
+      "train_score": 9.491,
+      "train_std": 2.94,
+      "unseen_score": 9.178,
+      "unseen_std": 3.146,
+      "gen_gap": 0.312
     }
   ],
   "A2C": [
     {
-      "seed": 42,
-      "steps": 49152,
-      "elapsed_sec": 12.58,
-      "fps": 3907.9,
-      "train_score": 0.0,
-      "unseen_score": 0.02,
-      "det_score": 0.26,
-      "gen_gap": -0.02
+      "seed": 0,
+      "steps": 7995392,
+      "elapsed_sec": 378.53,
+      "fps": 21122.3,
+      "train_score": 1.459,
+      "train_std": 0.982,
+      "unseen_score": 1.35,
+      "unseen_std": 1.008,
+      "gen_gap": 0.109
     },
     {
-      "seed": 123,
-      "steps": 49152,
-      "elapsed_sec": 12.54,
-      "fps": 3919.7,
-      "train_score": 0.04,
-      "unseen_score": 0.02,
-      "det_score": 0.2,
-      "gen_gap": 0.02
+      "seed": 1,
+      "steps": 7995392,
+      "elapsed_sec": 378.67,
+      "fps": 21114.4,
+      "train_score": 1.389,
+      "train_std": 1.001,
+      "unseen_score": 1.311,
+      "unseen_std": 1.028,
+      "gen_gap": 0.078
+    },
+    {
+      "seed": 2,
+      "steps": 7995392,
+      "elapsed_sec": 380.87,
+      "fps": 20992.4,
+      "train_score": 1.623,
+      "train_std": 1.038,
+      "unseen_score": 1.373,
+      "unseen_std": 0.982,
+      "gen_gap": 0.25
     }
   ],
   "DQN": [
     {
-      "seed": 42,
-      "steps": 49984,
-      "elapsed_sec": 62.99,
-      "fps": 793.5,
-      "train_score": 0.22,
-      "unseen_score": 0.22,
-      "det_score": 0.22,
-      "gen_gap": 0.0
+      "seed": 0,
+      "steps": 8000000,
+      "elapsed_sec": 691.54,
+      "fps": 11568.4,
+      "train_score": 2.741,
+      "train_std": 0.845,
+      "unseen_score": 2.686,
+      "unseen_std": 1.02,
+      "gen_gap": 0.055
     },
     {
-      "seed": 123,
-      "steps": 49984,
-      "elapsed_sec": 62.16,
-      "fps": 804.1,
-      "train_score": 0.3,
-      "unseen_score": 0.24,
-      "det_score": 0.24,
-      "gen_gap": 0.06
+      "seed": 1,
+      "steps": 8000000,
+      "elapsed_sec": 695.19,
+      "fps": 11507.6,
+      "train_score": 0.178,
+      "train_std": 1.035,
+      "unseen_score": 0.139,
+      "unseen_std": 0.963,
+      "gen_gap": 0.039
+    },
+    {
+      "seed": 2,
+      "steps": 8000000,
+      "elapsed_sec": 677.06,
+      "fps": 11815.8,
+      "train_score": 2.881,
+      "train_std": 0.874,
+      "unseen_score": 2.866,
+      "unseen_std": 1.064,
+      "gen_gap": 0.016
     }
   ]
 }

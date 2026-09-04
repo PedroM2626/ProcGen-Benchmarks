@@ -2,144 +2,163 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-# Configuração de VRAM para GPU de Laptop
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
-# Add project root
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
 import flax.linen as nn
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from src.env import CraftaxLevelManager
-from src.combinatorial_engine import FeatureExtractorNatureCNN, FeatureExtractorImpalaResNet
+from src.combinatorial_engine import FeatureExtractorNatureCNN, UniversalActorCritic
 from src.graph_modules import FeatureExtractorGNN
+from src.ppo import PPOTrainer, create_train_state
+from src.eval_utils import make_craftax_evaluator
 
 
 class FeatureExtractorMLPVector(nn.Module):
-    """Standard Tabular MLP extractor (matching ProcgenVectorWrapper / MLP 256D)."""
+    """Tabular MLP encoder for the symbolic (1345-D) representation."""
     hidden_dim: int = 256
     out_dim: int = 512
 
     @nn.compact
-    def __call__(self, x: jnp.ndarray) -> jnp.ndarray:
-        x_flat = x.astype(jnp.float32).reshape((x.shape[0], -1))
-        h = nn.Dense(self.hidden_dim)(x_flat)
-        h = nn.relu(h)
-        h = nn.Dense(self.hidden_dim)(h)
-        h = nn.relu(h)
+    def __call__(self, x):
+        x = x.astype(jnp.float32).reshape((x.shape[0], -1))
+        h = nn.relu(nn.Dense(self.hidden_dim)(x))
+        h = nn.relu(nn.Dense(self.hidden_dim)(h))
         return nn.Dense(self.out_dim)(h)
 
 
-def run_triad_comparison():
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print("=" * 110, flush=True)
-    print("   A TRÍADE DE REPRESENTAÇÕES EM RL: PIXELS (2D GRID) vs VETOR (TABULAR MLP) vs GRAFO (GNN / GAT)")
-    print(f"   Backend: {backend.upper()} | Dispositivo: {devices[0]}")
-    print("=" * 110, flush=True)
+def _train_one(name, extractor_cls, use_pixels, total_steps, num_envs, seed,
+               eval_episodes, eval_horizon):
+    env_manager = CraftaxLevelManager(use_pixels=use_pixels, num_train_levels=200, eval_seed_offset=1000)
+    obs_sample, _ = env_manager.env.reset(jax.random.PRNGKey(0), env_manager.params)
+    input_shape = obs_sample.shape
 
-    batch_size = 32
-    obs_shape = (63, 63, 3)
-    dummy_pixels = jnp.zeros((batch_size, *obs_shape), dtype=jnp.float32)
-    dummy_vector = jnp.zeros((batch_size, 1345), dtype=jnp.float32)
-    rng = jax.random.PRNGKey(42)
+    model = UniversalActorCritic(extractor_cls=extractor_cls, action_dim=env_manager.num_actions)
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    train_state = create_train_state(model, init_rng, input_shape, learning_rate=3e-4)
+    trainer = PPOTrainer(model=model, env_manager=env_manager, num_envs=num_envs, num_steps=128)
+
+    obs, env_state, run_rng = env_manager.reset_train(run_rng, num_envs)
+    runner_state = (train_state, env_state, obs, run_rng)
+    train_step = jax.jit(trainer.train_step)
+    iters = max(1, total_steps // (num_envs * 128))
+
+    t0 = time.time()
+    for it in range(iters):
+        runner_state, metrics = train_step(runner_state)
+        if it % 50 == 0 or it == iters - 1:
+            print(f"    [{name} s{seed}] it {it}/{iters} loss={float(metrics['loss']):.4f} "
+                  f"rew={float(metrics['mean_reward']):.3f}", flush=True)
+    elapsed = time.time() - t0
+    final_state = runner_state[0]
+    real_steps = iters * num_envs * 128
+    fps = real_steps / (elapsed + 1e-8)
+
+    def greedy(params, obs, rng):
+        logits, _ = model.apply({'params': params}, obs)
+        return jnp.argmax(logits, axis=-1)
+
+    eval_fn = make_craftax_evaluator(env_manager, greedy, num_envs=eval_episodes, horizon=eval_horizon)
+    e_rng = jax.random.PRNGKey(seed + 999)
+    e_rng, r1, r2 = jax.random.split(e_rng, 3)
+    tr_mean, tr_std = eval_fn(final_state.params, r1, unseen=False)
+    un_mean, un_std = eval_fn(final_state.params, r2, unseen=True)
+    return {"fps": fps, "elapsed": elapsed, "steps": int(real_steps),
+            "train": tr_mean, "train_std": tr_std, "unseen": un_mean, "unseen_std": un_std}
+
+
+def run_triad_comparison(total_steps=5_000_000, num_envs=256, seeds=(0, 1, 2),
+                         eval_episodes=128, eval_horizon=1000):
+    print("=" * 115, flush=True)
+    print("   BENCHMARK REAL DA TRÍADE DE REPRESENTAÇÕES: PIXELS vs VETOR vs GRAFO (PPO treinado)", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   total_steps={total_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("=" * 115, flush=True)
+
+    reps = [
+        ("Pixels_NatureCNN", FeatureExtractorNatureCNN, True,
+         "Imagem / Grid 2D Convolucional", "Localidade espacial 2D e invariância à translação",
+         "Não (depende da coordenada exata do pixel)"),
+        ("Vetor_MLP", FeatureExtractorMLPVector, False,
+         "Vetor Tabular / Simbólico (1345D)", "Nenhum (conectividade densa cega)",
+         "Não (ordem rígida de features nas colunas)"),
+        ("Grafo_GNN", FeatureExtractorGNN, False,
+         "Grafo Relacional (nós de entidades + arestas + GAT)",
+         "Invariância à permutação de entidades + raciocínio relacional",
+         "Sim (readout mean+max sobre nós é invariante à permutação de entidades)"),
+    ]
 
     results = {}
+    for name, extractor, use_pixels, modality, ind_bias, invariance in reps:
+        runs = []
+        print(f"\n>>> Treinando representação {name}...", flush=True)
+        for seed in seeds:
+            r = _train_one(name, extractor, use_pixels, total_steps, num_envs, seed,
+                           eval_episodes, eval_horizon)
+            runs.append({"seed": seed, **r})
+            print(f"  [{name} s{seed}] steps={r['steps']:,} FPS={r['fps']:,.0f} "
+                  f"Train={r['train']:.2f}±{r['train_std']:.2f} Unseen={r['unseen']:.2f}±{r['unseen_std']:.2f}",
+                  flush=True)
+        results[name] = {
+            "modalidade": modality,
+            "vies_indutivo": ind_bias,
+            "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0),
+            "train_score": round(float(np.mean([x["train"] for x in runs])), 3),
+            "train_std": round(float(np.mean([x["train_std"] for x in runs])), 3),
+            "unseen_score": round(float(np.mean([x["unseen"] for x in runs])), 3),
+            "unseen_std": round(float(np.mean([x["unseen_std"] for x in runs])), 3),
+            "seed_unseen_std": round(float(np.std([x["unseen"] for x in runs])), 3),
+            "invariancia_permutacao": invariance,
+            "runs": runs,
+        }
+        out = Path("results/representations_triad_results.json")
+        out.parent.mkdir(exist_ok=True)
+        with open(out, "w") as f:
+            json.dump(results, f, indent=2)
 
-    # 1. PIXELS (NatureCNN)
-    cnn = FeatureExtractorNatureCNN()
-    rng, sub = jax.random.split(rng)
-    p_cnn = cnn.init(sub, dummy_pixels)
-    cnn_apply = jax.jit(cnn.apply)
-
-    t0 = time.time()
-    for _ in range(50):
-        out_cnn = cnn_apply(p_cnn, dummy_pixels)
-    jax.block_until_ready(out_cnn)
-    t_cnn = time.time() - t0
-    fps_cnn = (50 * batch_size) / t_cnn
-
-    results["Pixels_CNN"] = {
-        "modalidade": "Imagem / Grid 2D Convolucional",
-        "viés_indutivo": "Localidade espacial 2D e invariância à translação",
-        "throughput_fps": round(fps_cnn, 0),
-        "unseen_score": 0.190,
-        "det_score": 0.230,
-        "invariancia_permutacao": "Não (depende da coordenada exata do pixel)",
-        "conclusao": "Excelente para percepção de texturas, mas gasta computação com pixels vazios (grama/céu)"
-    }
-
-    # 2. VETOR (MLP Simbólico)
-    mlp = FeatureExtractorMLPVector()
-    rng, sub = jax.random.split(rng)
-    p_mlp = mlp.init(sub, dummy_vector)
-    mlp_apply = jax.jit(mlp.apply)
-
-    t0 = time.time()
-    for _ in range(50):
-        out_mlp = mlp_apply(p_mlp, dummy_vector)
-    jax.block_until_ready(out_mlp)
-    t_mlp = time.time() - t0
-    fps_mlp = (50 * batch_size) / t_mlp
-
-    results["Vetor_MLP"] = {
-        "modalidade": "Vetor Tabular / Simbólico (1345D)",
-        "viés_indutivo": "Nenhum (conectividade densa cega)",
-        "throughput_fps": round(fps_mlp, 0),
-        "unseen_score": 0.205,
-        "det_score": 0.210,
-        "invariancia_permutacao": "Não (ordem rígida de features nas colunas)",
-        "conclusao": "Muito rápido e sem ruído de renderização (igual ao mlp_vector do ProcGen), mas perde topologia 2D"
-    }
-
-    # 3. GRAFO (GNN / GAT com Message Passing)
-    gnn = FeatureExtractorGNN()
-    rng, sub = jax.random.split(rng)
-    p_gnn = gnn.init(sub, dummy_pixels)
-    gnn_apply = jax.jit(gnn.apply)
-
-    t0 = time.time()
-    for _ in range(50):
-        out_gnn = gnn_apply(p_gnn, dummy_pixels)
-    jax.block_until_ready(out_gnn)
-    t_gnn = time.time() - t0
-    fps_gnn = (50 * batch_size) / t_gnn
-
-    # Teste de Invariância à Permutação de Entidades:
-    # O readout do Grafo (mean + max pooling) garante f(P * V) = f(V)
-    results["Grafo_GNN"] = {
-        "modalidade": "Grafo Relacional (Nós de Entidades + Arestas Espaciais + GAT)",
-        "viés_indutivo": "Invariância à permutação de entidades + raciocínio relacional",
-        "throughput_fps": round(fps_gnn, 0),
-        "unseen_score": 0.252,
-        "det_score": 0.260,
-        "invariancia_permutacao": "SIM (Totalmente invariante à ordem das entidades)",
-        "conclusao": "VENCEDOR DA TRÍADE (+32% vs Pixels, +23% vs Vetor): foca apenas em entidades ativas e relações de distância"
-    }
-
-    print("\nResultados do Comparativo Direto da Tríade de Representações:", flush=True)
-    print(f"{'Representação':<18} | {'Modalidade':<32} | {'Throughput':<12} | {'Score Unseen':<14} | {'Permutação':<12}", flush=True)
-    print("-" * 110, flush=True)
-    print(f"{'Pixels (CNN)':<18} | {'Grid 2D Convolucional':<32} | {fps_cnn:>8.0f} FPS | {0.190:>14.3f} | Não", flush=True)
-    print(f"{'Vetor (MLP)':<18} | {'Vetor Tabular / Simbólico':<32} | {fps_mlp:>8.0f} FPS | {0.205:>14.3f} | Não", flush=True)
-    print(f"{'Grafo (GNN)':<18} | {'Grafo de Entidades (GAT)':<32} | {fps_gnn:>8.0f} FPS | {0.252:>14.3f} | SIM (Líder)", flush=True)
-
-    out_file = Path("results/representations_triad_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-
-    print("-" * 110, flush=True)
-    print(f"[CONCLUÍDO] Comparativo da Tríade salvo em: {out_file}", flush=True)
-    print("=" * 110, flush=True)
+    # Figure from REAL numbers
+    names = [r[0] for r in reps]
+    unseen = [results[n]["unseen_score"] for n in names]
+    err = [results[n]["seed_unseen_std"] for n in names]
+    fps = [results[n]["throughput_fps"] for n in names]
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
+    ax1.bar(names, unseen, yerr=err, color=['#ef4444', '#10b981', '#3b82f6'], edgecolor='black', capsize=4)
+    ax1.set_ylabel("Retorno episódico (níveis inéditos)", fontweight='bold')
+    ax1.set_title("Tríade de Representações — Retorno Real Treinado (PPO)", fontweight='bold')
+    for i, v in enumerate(unseen):
+        ax1.text(i, v, f"{v:.2f}", ha='center', va='bottom', fontweight='bold')
+    ax2.bar(names, fps, color=['#ef4444', '#10b981', '#3b82f6'], edgecolor='black')
+    ax2.set_ylabel("Throughput (FPS)", fontweight='bold')
+    ax2.set_title("Throughput de Treino na GPU", fontweight='bold')
+    for i, v in enumerate(fps):
+        ax2.text(i, v, f"{v:,.0f}", ha='center', va='bottom', fontsize=8, fontweight='bold')
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/01_representations_triad.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+    print("\n[SUCESSO] Resultados reais salvos em results/representations_triad_results.json "
+          "e figures/01_representations_triad.png", flush=True)
     return results
 
 
 if __name__ == "__main__":
-    run_triad_comparison()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=5_000_000)
+    p.add_argument("--num-envs", type=int, default=256)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-episodes", type=int, default=128)
+    p.add_argument("--eval-horizon", type=int, default=1000)
+    a = p.parse_args()
+    run_triad_comparison(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds),
+                         eval_episodes=a.eval_episodes, eval_horizon=a.eval_horizon)

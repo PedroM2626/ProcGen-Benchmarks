@@ -1,105 +1,231 @@
 {
   "single_agent_3d": {
-    "HalfCheetah_Continuous_PPO": {
-      "ambiente": "HalfCheetah 3D (Brax)",
-      "algoritmo": "Continuous PPO",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 4048.0,
-      "reward": 4820.5,
-      "status": "Locomo\u00e7\u00e3o est\u00e1vel"
+    "halfcheetah_Passive": {
+      "ambiente": "Halfcheetah 3D",
+      "algoritmo": "A\u00e7\u00e3o Nula (passiva)",
+      "reward_mean": 48.06,
+      "reward_std": 1.72,
+      "throughput_fps": 0.0
     },
-    "HalfCheetah_SAC": {
-      "ambiente": "HalfCheetah 3D (Brax)",
-      "algoritmo": "Soft Actor-Critic (SAC)",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 3823.0,
-      "reward": 6340.2,
-      "status": "Alta velocidade e torque suave (+31%)"
+    "halfcheetah_PPO": {
+      "ambiente": "Halfcheetah 3D",
+      "algoritmo": "Halfcheetah PPO",
+      "reward_mean": -333.18,
+      "reward_std": 279.98,
+      "throughput_fps": 4286.0,
+      "runs": [
+        {
+          "reward": -463.8154296875,
+          "reward_std": 337.6394348144531,
+          "fps": 4194.256096983683,
+          "steps": 1998848
+        },
+        {
+          "reward": -202.5428466796875,
+          "reward_std": 222.31884765625,
+          "fps": 4376.976818041269,
+          "steps": 1998848
+        }
+      ]
     },
-    "HalfCheetah_SAC_GNN3D": {
-      "ambiente": "HalfCheetah 3D (Brax)",
-      "algoritmo": "SAC + GNN_3D",
-      "representacao": "Grafo 3D de Juntas (GAT)",
-      "throughput_fps": 3508.0,
-      "reward": 6890.0,
-      "status": "Campe\u00e3o HalfCheetah: modela cadeia cinem\u00e1tica como grafo"
+    "halfcheetah_SAC": {
+      "ambiente": "Halfcheetah 3D",
+      "algoritmo": "Halfcheetah SAC",
+      "reward_mean": -429.18,
+      "reward_std": 100.52,
+      "throughput_fps": 4167.0,
+      "runs": [
+        {
+          "reward": -457.86871337890625,
+          "reward_std": 26.681976318359375,
+          "fps": 4114.3321057278345,
+          "steps": 2000000
+        },
+        {
+          "reward": -400.4841613769531,
+          "reward_std": 174.3568878173828,
+          "fps": 4220.155945144474,
+          "steps": 2000000
+        }
+      ]
     },
-    "Ant_Continuous_PPO": {
-      "ambiente": "Ant 3D (Brax)",
-      "algoritmo": "Continuous PPO",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 3868.0,
-      "reward": 3450.0,
-      "status": "Locomo\u00e7\u00e3o quadr\u00fapede funcional"
+    "ant_Passive": {
+      "ambiente": "Ant 3D",
+      "algoritmo": "A\u00e7\u00e3o Nula (passiva)",
+      "reward_mean": 1000.45,
+      "reward_std": 7.7,
+      "throughput_fps": 0.0
     },
-    "Ant_SAC": {
-      "ambiente": "Ant 3D (Brax)",
-      "algoritmo": "Soft Actor-Critic (SAC)",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 3653.0,
-      "reward": 4820.0,
-      "status": "Passadas eficientes com menor custo articular"
+    "ant_PPO": {
+      "ambiente": "Ant 3D",
+      "algoritmo": "Ant PPO",
+      "reward_mean": -2959.51,
+      "reward_std": 115.05,
+      "throughput_fps": 9758.0,
+      "runs": [
+        {
+          "reward": -3547.017822265625,
+          "reward_std": 69.03468322753906,
+          "fps": 9767.189663249723,
+          "steps": 1998848
+        },
+        {
+          "reward": -2372.00146484375,
+          "reward_std": 161.0732879638672,
+          "fps": 9749.56230649906,
+          "steps": 1998848
+        }
+      ]
     },
-    "Ant_SAC_GNN3D": {
-      "ambiente": "Ant 3D (Brax)",
-      "algoritmo": "SAC + GNN_3D",
-      "representacao": "Grafo 3D de Juntas (GAT)",
-      "throughput_fps": 3266.0,
-      "reward": 5310.5,
-      "status": "Campe\u00e3o Ant: coordena\u00e7\u00e3o das 4 patas via Message Passing"
+    "ant_SAC": {
+      "ambiente": "Ant 3D",
+      "algoritmo": "Ant SAC",
+      "reward_mean": 2751.14,
+      "reward_std": 182.88,
+      "throughput_fps": 10319.0,
+      "runs": [
+        {
+          "reward": 3470.767578125,
+          "reward_std": 190.4683837890625,
+          "fps": 10299.468947098825,
+          "steps": 2000000
+        },
+        {
+          "reward": 2031.5191650390625,
+          "reward_std": 175.28977966308594,
+          "fps": 10337.657918035375,
+          "steps": 2000000
+        }
+      ]
     },
-    "Humanoid_Continuous_PPO": {
-      "ambiente": "Humanoid 3D (Brax)",
-      "algoritmo": "Continuous PPO",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 1493.0,
-      "reward": 5120.0,
-      "status": "Equil\u00edbrio b\u00edpede b\u00e1sico"
+    "humanoid_Passive": {
+      "ambiente": "Humanoid 3D",
+      "algoritmo": "A\u00e7\u00e3o Nula (passiva)",
+      "reward_mean": 5174.13,
+      "reward_std": 10.76,
+      "throughput_fps": 0.0
     },
-    "Humanoid_SAC": {
-      "ambiente": "Humanoid 3D (Brax)",
-      "algoritmo": "Soft Actor-Critic (SAC)",
-      "representacao": "Vetor Cinem\u00e1tico (MLP)",
-      "throughput_fps": 1391.0,
-      "reward": 8250.0,
-      "status": "Marcha b\u00edpede din\u00e2mica de alta velocidade (+61%)"
+    "humanoid_PPO": {
+      "ambiente": "Humanoid 3D",
+      "algoritmo": "Humanoid PPO",
+      "reward_mean": 4834.27,
+      "reward_std": 2.49,
+      "throughput_fps": 4953.0,
+      "runs": [
+        {
+          "reward": 4771.68359375,
+          "reward_std": 1.8735767602920532,
+          "fps": 4942.957514719338,
+          "steps": 1998848
+        },
+        {
+          "reward": 4896.8505859375,
+          "reward_std": 3.1030075550079346,
+          "fps": 4963.790623836207,
+          "steps": 1998848
+        }
+      ]
     },
-    "Humanoid_SAC_GNN3D": {
-      "ambiente": "Humanoid 3D (Brax)",
-      "algoritmo": "SAC + GNN_3D",
-      "representacao": "Grafo 3D de Juntas (GAT)",
-      "throughput_fps": 1255.0,
-      "reward": 9180.0,
-      "status": "Campe\u00e3o Absoluto 3D: Topologia articular b\u00edpede completa"
+    "humanoid_SAC": {
+      "ambiente": "Humanoid 3D",
+      "algoritmo": "Humanoid SAC",
+      "reward_mean": 4901.73,
+      "reward_std": 23.56,
+      "throughput_fps": 4983.0,
+      "runs": [
+        {
+          "reward": 4703.98046875,
+          "reward_std": 17.633033752441406,
+          "fps": 5011.580940120344,
+          "steps": 2000000
+        },
+        {
+          "reward": 5099.48046875,
+          "reward_std": 29.483009338378906,
+          "fps": 4954.395379037603,
+          "steps": 2000000
+        }
+      ]
     }
   },
   "multi_agent_3d": {
     "IPPO_3D": {
-      "algoritmo": "IPPO 3D (Independente)",
-      "paradigma": "DTDE Descentralizado",
-      "throughput_fps": 2618614.0,
-      "reward_cooperativa": -1.95,
-      "cobertura_3d": 71.4,
-      "taxa_colisao_esferica": "Alta (1.82 colis\u00f5es/ep)",
-      "conclusao": "Sem vis\u00e3o global 3D, drones colidem no ar"
+      "algoritmo": "IPPO 3D",
+      "reward_mean": -70.9,
+      "reward_std": 16.44,
+      "cobertura_3d": 5.9,
+      "colisoes_medias": 43.91,
+      "throughput_fps": 668740.0,
+      "runs": [
+        {
+          "reward": -71.57341003417969,
+          "reward_std": 15.706426620483398,
+          "coverage": 5.226564407348633,
+          "collisions": 48.01953125,
+          "fps": 679552.6954708929,
+          "steps": 2998272
+        },
+        {
+          "reward": -70.22855377197266,
+          "reward_std": 17.171228408813477,
+          "coverage": 6.536458432674408,
+          "collisions": 39.8046875,
+          "fps": 657926.493349618,
+          "steps": 2998272
+        }
+      ]
     },
     "MAPPO_3D": {
-      "algoritmo": "MAPPO 3D (CTDE)",
-      "paradigma": "CTDE Cr\u00edtico Centralizado",
-      "throughput_fps": 2480792.0,
-      "reward_cooperativa": -0.89,
-      "cobertura_3d": 91.5,
-      "taxa_colisao_esferica": "M\u00e9dia (0.42 colis\u00f5es/ep)",
-      "conclusao": "Cr\u00edtico centralizado reduz colis\u00f5es e melhora rotas 3D"
+      "algoritmo": "MAPPO 3D",
+      "reward_mean": -85.18,
+      "reward_std": 22.18,
+      "cobertura_3d": 7.3,
+      "colisoes_medias": 131.12,
+      "throughput_fps": 641127.0,
+      "runs": [
+        {
+          "reward": -90.03544616699219,
+          "reward_std": 21.573524475097656,
+          "coverage": 7.229168713092804,
+          "collisions": 156.50390625,
+          "fps": 660368.909768407,
+          "steps": 2998272
+        },
+        {
+          "reward": -80.32196807861328,
+          "reward_std": 22.780500411987305,
+          "coverage": 7.356772571802139,
+          "collisions": 105.73828125,
+          "fps": 621884.9221069535,
+          "steps": 2998272
+        }
+      ]
     },
-    "MA-POCA_3D": {
-      "algoritmo": "MA-POCA 3D (Auto-Aten\u00e7\u00e3o + Contrafactual)",
-      "paradigma": "CTDE Relacional 3D",
-      "throughput_fps": 2342970.0,
-      "reward_cooperativa": -0.58,
-      "cobertura_3d": 97.2,
-      "taxa_colisao_esferica": "M\u00ednima (0.08 colis\u00f5es/ep)",
-      "conclusao": "CAMPE\u00c3O MARL 3D: Auto-aten\u00e7\u00e3o espacial 3D isola trajet\u00f3rias e atinge 97.2% de cobertura"
+    "MAPOCA_3D": {
+      "algoritmo": "MAPOCA 3D",
+      "reward_mean": -71.69,
+      "reward_std": 15.52,
+      "cobertura_3d": 5.8,
+      "colisoes_medias": 50.83,
+      "throughput_fps": 428845.0,
+      "runs": [
+        {
+          "reward": -73.15652465820312,
+          "reward_std": 15.535941123962402,
+          "coverage": 5.61588741838932,
+          "collisions": 51.3828125,
+          "fps": 434530.3459369749,
+          "steps": 2998272
+        },
+        {
+          "reward": -70.22320556640625,
+          "reward_std": 15.50628662109375,
+          "coverage": 5.929689854383469,
+          "collisions": 50.2734375,
+          "fps": 423159.6961652383,
+          "steps": 2998272
+        }
+      ]
     }
   }
 }

@@ -2,199 +2,203 @@ import os
 import sys
 import time
 import json
+import argparse
 from pathlib import Path
 
-# Configuração de VRAM para GPU de Laptop
-os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
-os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.55"
-
-# Add project root
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
-import flax.linen as nn
+import numpy as np
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 import brax.envs as brax_envs
 from src.marl_3d_env import MultiAgent3DCooperativeEnv
-from src.graph_3d_modules import Graph3DEntityExtractor
-from src.continuous_modules import SACTanhGaussianActor, SACCritic, ContinuousGaussianActor
+from src.marl3d_trainers import ContinuousMARLPPOTrainer, make_marl3d_evaluator, BraxWrapper
+from src.continuous_rl import GaussianPPOTrainer, SACTrainer
+from src.eval_utils import make_continuous_evaluator, make_fixed_horizon_evaluator
 
 
-def run_3d_benchmark_suite():
-    backend = jax.default_backend()
-    devices = jax.devices()
-    print("=" * 125, flush=True)
-    print("   SUÍTE DE BENCHMARK 3D EM JAX: GOOGLE BRAX (ANT, CHEETAH, HUMANOID) + MULTI-AGENT RL 3D (MA-POCA 3D)")
-    print(f"   Backend: {backend.upper()} | Dispositivo: {devices[0]}")
-    print("=" * 125, flush=True)
+# ---------------------------------------------------------------------
+# 1. SINGLE-AGENT 3D: GOOGLE BRAX (real PPO / SAC training)
+# ---------------------------------------------------------------------
+def _brax_train(algo, env_name, total_steps, num_envs, seed):
+    benv = brax_envs.get_environment(env_name=env_name)
+    env = BraxWrapper(benv, max_steps=1000)
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    reset_vmap = jax.jit(jax.vmap(env.reset))
+    obs, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
 
-    results = {
-        "single_agent_3d": {},
-        "multi_agent_3d": {}
-    }
-
-    # =========================================================================
-    # 1. SINGLE-AGENT 3D: GOOGLE BRAX (Locomoção e Física 3D em Larga Escala)
-    # =========================================================================
-    print("\n--- 1. SINGLE-AGENT 3D BENCHMARK (GOOGLE BRAX) ---", flush=True)
-    brax_environments = ["halfcheetah", "ant", "humanoid"]
-    
-    for env_name in brax_environments:
-        print(f"\nInicializando ambiente Brax 3D: {env_name.upper()}...", flush=True)
-        env = brax_envs.get_environment(env_name=env_name)
-        num_envs = 64
-        
-        # Teste de Throughput de Simulação 3D Direta na GPU
-        reset_fn = jax.jit(jax.vmap(env.reset))
-        step_fn = jax.jit(jax.vmap(env.step))
-        
-        rng = jax.random.PRNGKey(42)
-        r_keys = jax.random.split(rng, num_envs)
-        env_state = reset_fn(r_keys)
-        dummy_actions = jnp.zeros((num_envs, env.action_size))
-
-        # Warmup JIT
-        s_keys = jax.random.split(rng, num_envs)
-        _ = step_fn(env_state, dummy_actions)
-
-        # Benchmark 200 passos
+    if algo == "PPO":
+        tr = GaussianPPOTrainer(env, obs_dim=env.obs_dim, action_dim=env.action_dim,
+                                num_envs=num_envs, num_steps=64)
+        params, opt_state = tr.create_state(init_rng)
+        carry = (params, opt_state, env_state, obs, run_rng)
+        step = tr.make_train_step()
+        iters = max(1, total_steps // (num_envs * 64))
         t0 = time.time()
-        for _ in range(200):
-            env_state = step_fn(env_state, dummy_actions)
-        jax.block_until_ready(env_state.obs)
-        t_sim = time.time() - t0
-        sim_fps = (200 * num_envs) / t_sim
-        print(f"  Throughput de Simulação 3D: {sim_fps:,.0f} steps/segundo!", flush=True)
+        for _ in range(iters):
+            carry, m = step(carry, None)
+        elapsed = time.time() - t0
+        sel = tr.make_eval_policy()
+        p = carry[0]
+        real_steps = iters * num_envs * 64
+    else:  # SAC
+        tr = SACTrainer(env, obs_dim=env.obs_dim, action_dim=env.action_dim, num_envs=num_envs,
+                        buffer_size=100000, batch_size=256)
+        params, target, opt_state, log_alpha, alpha_opt, buffer = tr.create_state(init_rng)
+        carry = (params, target, opt_state, log_alpha, alpha_opt, buffer, env_state, obs, run_rng)
+        step = tr.make_train_step()
+        iters = max(1, total_steps // num_envs)
+        t0 = time.time()
+        for _ in range(iters):
+            carry, m = step(carry, None)
+        elapsed = time.time() - t0
+        sel = tr.make_eval_policy()
+        p = carry[0]
+        real_steps = iters * num_envs
 
-        # Comparativo Algorítmico em 3D: PPO vs SAC vs SAC+GNN_3D
-        if env_name == "halfcheetah":
-            results["single_agent_3d"]["HalfCheetah_Continuous_PPO"] = {
-                "ambiente": "HalfCheetah 3D (Brax)", "algoritmo": "Continuous PPO",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.90, 0),
-                "reward": 4820.5, "status": "Locomoção estável"
-            }
-            results["single_agent_3d"]["HalfCheetah_SAC"] = {
-                "ambiente": "HalfCheetah 3D (Brax)", "algoritmo": "Soft Actor-Critic (SAC)",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.85, 0),
-                "reward": 6340.2, "status": "Alta velocidade e torque suave (+31%)"
-            }
-            results["single_agent_3d"]["HalfCheetah_SAC_GNN3D"] = {
-                "ambiente": "HalfCheetah 3D (Brax)", "algoritmo": "SAC + GNN_3D",
-                "representacao": "Grafo 3D de Juntas (GAT)", "throughput_fps": round(sim_fps * 0.78, 0),
-                "reward": 6890.0, "status": "Campeão HalfCheetah: modela cadeia cinemática como grafo"
-            }
-        elif env_name == "ant":
-            results["single_agent_3d"]["Ant_Continuous_PPO"] = {
-                "ambiente": "Ant 3D (Brax)", "algoritmo": "Continuous PPO",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.90, 0),
-                "reward": 3450.0, "status": "Locomoção quadrúpede funcional"
-            }
-            results["single_agent_3d"]["Ant_SAC"] = {
-                "ambiente": "Ant 3D (Brax)", "algoritmo": "Soft Actor-Critic (SAC)",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.85, 0),
-                "reward": 4820.0, "status": "Passadas eficientes com menor custo articular"
-            }
-            results["single_agent_3d"]["Ant_SAC_GNN3D"] = {
-                "ambiente": "Ant 3D (Brax)", "algoritmo": "SAC + GNN_3D",
-                "representacao": "Grafo 3D de Juntas (GAT)", "throughput_fps": round(sim_fps * 0.76, 0),
-                "reward": 5310.5, "status": "Campeão Ant: coordenação das 4 patas via Message Passing"
-            }
-        elif env_name == "humanoid":
-            results["single_agent_3d"]["Humanoid_Continuous_PPO"] = {
-                "ambiente": "Humanoid 3D (Brax)", "algoritmo": "Continuous PPO",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.88, 0),
-                "reward": 5120.0, "status": "Equilíbrio bípede básico"
-            }
-            results["single_agent_3d"]["Humanoid_SAC"] = {
-                "ambiente": "Humanoid 3D (Brax)", "algoritmo": "Soft Actor-Critic (SAC)",
-                "representacao": "Vetor Cinemático (MLP)", "throughput_fps": round(sim_fps * 0.82, 0),
-                "reward": 8250.0, "status": "Marcha bípede dinâmica de alta velocidade (+61%)"
-            }
-            results["single_agent_3d"]["Humanoid_SAC_GNN3D"] = {
-                "ambiente": "Humanoid 3D (Brax)", "algoritmo": "SAC + GNN_3D",
-                "representacao": "Grafo 3D de Juntas (GAT)", "throughput_fps": round(sim_fps * 0.74, 0),
-                "reward": 9180.0, "status": "Campeão Absoluto 3D: Topologia articular bípede completa"
-            }
+    ev = make_fixed_horizon_evaluator(env, lambda o, r: sel(p, o, r), num_envs=64, horizon=1000)
+    ret, ret_std = ev(jax.random.PRNGKey(seed + 777))
+    return {"reward": ret, "reward_std": ret_std, "fps": real_steps / (elapsed + 1e-8), "steps": int(real_steps)}
 
-    print("\nResultados do Benchmark Single-Agent 3D (Google Brax):", flush=True)
-    print(f"{'Ambiente 3D':<15} | {'Algoritmo':<18} | {'Representação':<22} | {'Throughput':<12} | {'Reward':<10}", flush=True)
-    print("-" * 85, flush=True)
-    for k, v in results["single_agent_3d"].items():
-        print(f"{v['ambiente']:<15} | {v['algoritmo']:<18} | {v['representacao']:<22} | {v['throughput_fps']:>8.0f} FPS | {v['reward']:>10.1f}", flush=True)
 
-    # =========================================================================
-    # 2. MULTI-AGENT 3D: COOPERATIVE DRONES NAVIGATION (Espaço Contínuo 3D)
-    # =========================================================================
-    print("\n" + "=" * 125, flush=True)
-    print("--- 2. MULTI-AGENT RL 3D BENCHMARK (3D COOPERATIVE NAVIGATION) ---", flush=True)
-    env_3d = MultiAgent3DCooperativeEnv(num_agents=3, num_landmarks=3)
-    num_envs_marl = 64
-    
-    r_keys = jax.random.split(rng, num_envs_marl)
-    reset_marl = jax.jit(jax.vmap(env_3d.reset))
-    step_marl = jax.jit(jax.vmap(env_3d.step))
+def _brax_passive(env_name, num_envs=64):
+    benv = brax_envs.get_environment(env_name=env_name)
+    env = BraxWrapper(benv, max_steps=1000)
+    adim = env.action_dim
+    ev = make_fixed_horizon_evaluator(env, lambda o, r: jnp.zeros((o.shape[0], adim)),
+                                      num_envs=num_envs, horizon=1000)
+    ret, ret_std = ev(jax.random.PRNGKey(0))
+    return {"reward": ret, "reward_std": ret_std}
 
-    obs_m, state_m = reset_marl(r_keys)
-    dummy_marl_actions = jnp.zeros((num_envs_marl, 3, 3))
 
-    # Warmup
-    _ = step_marl(r_keys, state_m, dummy_marl_actions)
-
+# ---------------------------------------------------------------------
+# 2. MULTI-AGENT 3D: continuous drones (real IPPO/MAPPO/MA-POCA training)
+# ---------------------------------------------------------------------
+def _marl3d_train(algo, total_steps, num_envs, seed, eval_envs):
+    env = MultiAgent3DCooperativeEnv(num_agents=3, num_landmarks=3, max_steps=100)
+    rng = jax.random.PRNGKey(seed)
+    rng, init_rng, run_rng = jax.random.split(rng, 3)
+    tr = ContinuousMARLPPOTrainer(algo, env, num_envs=num_envs, num_steps=64)
+    params, opt_state = tr.create_state(init_rng)
+    reset_vmap = jax.jit(jax.vmap(env.reset))
+    obs, env_state = reset_vmap(jax.random.split(run_rng, num_envs))
+    carry = (params, opt_state, env_state, obs, run_rng)
+    step = tr.make_train_step()
+    iters = max(1, total_steps // (num_envs * 64))
     t0 = time.time()
-    for _ in range(200):
-        obs_m, state_m, r, d = step_marl(r_keys, state_m, dummy_marl_actions)
-    jax.block_until_ready(obs_m)
-    t_marl3d = time.time() - t0
-    marl_3d_fps = (200 * num_envs_marl * 3) / t_marl3d
+    for _ in range(iters):
+        carry, m = step(carry, None)
+    elapsed = time.time() - t0
+    sel = tr.make_selector(carry[0])
+    ev = make_marl3d_evaluator(env, sel, num_envs=eval_envs)
+    rew, std, cov, col = ev(jax.random.PRNGKey(seed + 777))
+    fps = iters * num_envs * 64 * env.num_agents / (elapsed + 1e-8)
+    return {"reward": rew, "reward_std": std, "coverage": cov, "collisions": col,
+            "fps": fps, "steps": int(iters * num_envs * 64)}
 
-    print(f"Throughput de Simulação Multi-Agente 3D na GPU: {marl_3d_fps:,.0f} steps/segundo!\n", flush=True)
 
-    # Paradigmas MARL em 3D
-    results["multi_agent_3d"]["IPPO_3D"] = {
-        "algoritmo": "IPPO 3D (Independente)",
-        "paradigma": "DTDE Descentralizado",
-        "throughput_fps": round(marl_3d_fps * 0.95, 0),
-        "reward_cooperativa": -1.95,
-        "cobertura_3d": 71.4,
-        "taxa_colisao_esferica": "Alta (1.82 colisões/ep)",
-        "conclusao": "Sem visão global 3D, drones colidem no ar"
-    }
-    results["multi_agent_3d"]["MAPPO_3D"] = {
-        "algoritmo": "MAPPO 3D (CTDE)",
-        "paradigma": "CTDE Crítico Centralizado",
-        "throughput_fps": round(marl_3d_fps * 0.90, 0),
-        "reward_cooperativa": -0.89,
-        "cobertura_3d": 91.5,
-        "taxa_colisao_esferica": "Média (0.42 colisões/ep)",
-        "conclusao": "Crítico centralizado reduz colisões e melhora rotas 3D"
-    }
-    results["multi_agent_3d"]["MA-POCA_3D"] = {
-        "algoritmo": "MA-POCA 3D (Auto-Atenção + Contrafactual)",
-        "paradigma": "CTDE Relacional 3D",
-        "throughput_fps": round(marl_3d_fps * 0.85, 0),
-        "reward_cooperativa": -0.58,
-        "cobertura_3d": 97.2,
-        "taxa_colisao_esferica": "Mínima (0.08 colisões/ep)",
-        "conclusao": "CAMPEÃO MARL 3D: Auto-atenção espacial 3D isola trajetórias e atinge 97.2% de cobertura"
-    }
+def run_3d_benchmarks(brax_steps=2_000_000, marl_steps=3_000_000, num_envs=128,
+                      seeds=(0, 1), eval_envs=256):
+    print("=" * 120, flush=True)
+    print("   SUÍTE REAL 3D: GOOGLE BRAX (PPO/SAC treinados) + DRONES 3D (IPPO/MAPPO/MA-POCA treinados)", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   brax_steps={brax_steps:,} | marl_steps={marl_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("=" * 120, flush=True)
 
-    print(f"{'Algoritmo MARL 3D':<25} | {'Paradigma':<25} | {'Throughput':<12} | {'Reward 3D':<10} | {'Cobertura':<10}", flush=True)
-    print("-" * 90, flush=True)
-    for k, v in results["multi_agent_3d"].items():
-        print(f"{v['algoritmo']:<25} | {v['paradigma']:<25} | {v['throughput_fps']:>8.0f} FPS | {v['reward_cooperativa']:>10.2f} | {v['cobertura_3d']:>8.1f}%", flush=True)
+    results = {"single_agent_3d": {}, "multi_agent_3d": {}}
+    out = Path("results/3d_benchmarks_results.json")
 
-    out_file = Path("results/3d_benchmarks_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
+    for env_name in ["halfcheetah", "ant", "humanoid"]:
+        print(f"\n--- Brax {env_name.upper()} ---", flush=True)
+        pas = _brax_passive(env_name)
+        results["single_agent_3d"][f"{env_name}_Passive"] = {
+            "ambiente": f"{env_name.capitalize()} 3D", "algoritmo": "Ação Nula (passiva)",
+            "reward_mean": round(pas["reward"], 2), "reward_std": round(pas["reward_std"], 2),
+            "throughput_fps": 0.0}
+        print(f"  [Passiva] Retorno={pas['reward']:+.2f}±{pas['reward_std']:.2f}", flush=True)
+        for algo in ["PPO", "SAC"]:
+            runs = []
+            for seed in seeds:
+                r = _brax_train(algo, env_name, brax_steps, num_envs, seed)
+                runs.append(r)
+                print(f"  [{env_name} {algo} s{seed}] Retorno={r['reward']:+.2f}±{r['reward_std']:.2f} "
+                      f"FPS={r['fps']:,.0f}", flush=True)
+            results["single_agent_3d"][f"{env_name}_{algo}"] = {
+                "ambiente": f"{env_name.capitalize()} 3D", "algoritmo": f"{env_name.capitalize()} {algo}",
+                "reward_mean": round(float(np.mean([x["reward"] for x in runs])), 2),
+                "reward_std": round(float(np.mean([x["reward_std"] for x in runs])), 2),
+                "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0),
+                "runs": runs}
+            _save(out, results)
 
-    print("-" * 125, flush=True)
-    print(f"[CONCLUÍDO] Todos os Benchmarks 3D (Single + Multi-Agent) salvos em: {out_file}", flush=True)
-    print("=" * 125, flush=True)
+    print("\n--- Drones 3D (multi-agente contínuo) ---", flush=True)
+    for algo in ["IPPO", "MAPPO", "MAPOCA"]:
+        runs = []
+        for seed in seeds:
+            r = _marl3d_train(algo, marl_steps, num_envs, seed, eval_envs)
+            runs.append(r)
+            print(f"  [{algo} 3D s{seed}] Retorno={r['reward']:+.2f}±{r['reward_std']:.2f} "
+                  f"Cob={r['coverage']:.1f}% Col={r['collisions']:.2f} FPS={r['fps']:,.0f}", flush=True)
+        results["multi_agent_3d"][f"{algo}_3D"] = {
+            "algoritmo": f"{algo} 3D",
+            "reward_mean": round(float(np.mean([x["reward"] for x in runs])), 2),
+            "reward_std": round(float(np.mean([x["reward_std"] for x in runs])), 2),
+            "cobertura_3d": round(float(np.mean([x["coverage"] for x in runs])), 1),
+            "colisoes_medias": round(float(np.mean([x["collisions"] for x in runs])), 2),
+            "throughput_fps": round(float(np.mean([x["fps"] for x in runs])), 0),
+            "runs": runs}
+        _save(out, results)
+
+    _plot(results)
+    print("\n[SUCESSO] Resultados reais em results/3d_benchmarks_results.json", flush=True)
     return results
 
 
+def _save(out, results):
+    out.parent.mkdir(exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(results, f, indent=2)
+
+
+def _plot(results):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 6))
+    bk = list(results["single_agent_3d"].keys())
+    bn = [results["single_agent_3d"][k]["algoritmo"] for k in bk]
+    br = [results["single_agent_3d"][k]["reward_mean"] for k in bk]
+    ax1.barh(range(len(bn)), br, color='#0284c7', edgecolor='black')
+    ax1.set_yticks(range(len(bn))); ax1.set_yticklabels(bn, fontsize=8)
+    ax1.set_title('Brax 3D — Retorno Real Treinado', fontweight='bold')
+    ax1.axvline(0, color='black', lw=0.8)
+    mk = list(results["multi_agent_3d"].keys())
+    mn = [results["multi_agent_3d"][k]["algoritmo"] for k in mk]
+    mc = [results["multi_agent_3d"][k]["cobertura_3d"] for k in mk]
+    mcol = [results["multi_agent_3d"][k]["colisoes_medias"] for k in mk]
+    x = np.arange(len(mn)); w = 0.35
+    ax2.bar(x - w/2, mc, w, label='Cobertura 3D (%)', color='#10b981', edgecolor='black')
+    ax2.bar(x + w/2, mcol, w, label='Colisões/ep', color='#ef4444', edgecolor='black')
+    ax2.set_xticks(x); ax2.set_xticklabels(mn, fontweight='bold')
+    ax2.set_title('Drones 3D — Cobertura vs Colisões (treinado)', fontweight='bold')
+    ax2.legend()
+    plt.tight_layout()
+    Path("figures").mkdir(exist_ok=True)
+    fig.savefig("figures/08_3d_benchmarks.png", dpi=200, bbox_inches='tight')
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    run_3d_benchmark_suite()
+    p = argparse.ArgumentParser()
+    p.add_argument("--brax-steps", type=int, default=2_000_000)
+    p.add_argument("--marl-steps", type=int, default=3_000_000)
+    p.add_argument("--num-envs", type=int, default=128)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1])
+    p.add_argument("--eval-envs", type=int, default=256)
+    a = p.parse_args()
+    run_3d_benchmarks(brax_steps=a.brax_steps, marl_steps=a.marl_steps, num_envs=a.num_envs,
+                      seeds=tuple(a.seeds), eval_envs=a.eval_envs)

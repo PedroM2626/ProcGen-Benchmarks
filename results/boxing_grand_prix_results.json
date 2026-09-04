@@ -1,0 +1,92 @@
+[
+  {
+    "reward_mean": 91.27,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "CQL",
+    "familia": "Offline RL (Pessimista)",
+    "rank": 1
+  },
+  {
+    "reward_mean": 91.27,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "DT",
+    "familia": "Sequence Modeling / Attn",
+    "rank": 2
+  },
+  {
+    "reward_mean": 88.32,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "IQL",
+    "familia": "Offline RL (Expectile)",
+    "rank": 3
+  },
+  {
+    "reward_mean": 76.58,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "Teacher (SAC Online)",
+    "familia": "Online Expert (Teacher)",
+    "rank": 4
+  },
+  {
+    "reward_mean": 74.47,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "BC",
+    "familia": "Imitation Learning Puro",
+    "rank": 5
+  },
+  {
+    "reward_mean": 69.42,
+    "reward_std": 3.4,
+    "win_rate": 100.0,
+    "ko_rate": 100.0,
+    "hits_per_round": 34.0,
+    "nome": "BCQ",
+    "familia": "Offline Generative VAE",
+    "rank": 6
+  },
+  {
+    "reward_mean": 15.66,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 0.0,
+    "hits_per_round": 30.0,
+    "nome": "BC_SAC",
+    "familia": "Offline-to-Online H\u00edbrido",
+    "rank": 7
+  },
+  {
+    "reward_mean": 6.57,
+    "reward_std": 0.0,
+    "win_rate": 100.0,
+    "ko_rate": 0.0,
+    "hits_per_round": 19.0,
+    "nome": "GAIL",
+    "familia": "Adversarial Imitation",
+    "rank": 8
+  },
+  {
+    "reward_mean": -190.34,
+    "reward_std": 25.88,
+    "win_rate": 64.1,
+    "ko_rate": 64.1,
+    "hits_per_round": 30.55,
+    "nome": "Random Baseline",
+    "familia": "Aleat\u00f3rio",
+    "rank": 9
+  }
+]

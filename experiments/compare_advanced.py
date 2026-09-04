@@ -1,204 +1,155 @@
+import os
+import sys
 import time
 import json
-import sys
+import argparse
 from pathlib import Path
 
-# Add project root to sys.path
+os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
+os.environ.setdefault("XLA_PYTHON_CLIENT_MEM_FRACTION", "0.55")
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import jax
 import jax.numpy as jnp
-import optax
-from flax.training.train_state import TrainState
+import numpy as np
 
 from src.env import CraftaxLevelManager
-from src.networks import SymbolicActorCritic, NatureCNN
-from src.advanced_modules import (
-    VisionTransformer,
-    IntrinsicCuriosityModule,
-    ContrastiveEncoder,
-    info_nce_loss,
-    LatentWorldModel
-)
-from src.ppo import PPOTrainer, create_train_state
+from src.combinatorial_engine import FeatureExtractorNatureCNN
+from src.advanced_modules import VisionTransformer
+from src.aux_ppo import AuxPPOTrainer
+from src.eval_utils import make_craftax_evaluator
 
 
-def run_advanced_paradigms_benchmark(total_steps: int = 30000, num_envs: int = 64, seed: int = 42):
-    print("=" * 80)
-    print("EXPERIMENTO AVANÇADO: WORLD MODELS, ICM, CONTRASTIVE & ViT vs CNN")
-    print("=" * 80)
+PARADIGMS = [
+    ("Baseline_PPO", "none", "PPO puro (NatureCNN)"),
+    ("PPO_ICM", "icm", "PPO + Intrinsic Curiosity (recompensa intrínseca real)"),
+    ("PPO_Contrastive", "contrastive", "PPO + CURL/InfoNCE no encoder"),
+    ("PPO_WorldModel", "world_model", "PPO + Latent World Model (dinâmica+reward)"),
+]
 
-    results = {}
-    env_manager = CraftaxLevelManager(use_pixels=False, num_train_levels=50, eval_seed_offset=1000)
+
+def train_paradigm(aux_type, total_steps, num_envs, seed, eval_episodes, eval_horizon):
+    env_manager = CraftaxLevelManager(use_pixels=True, num_train_levels=200, eval_seed_offset=1000)
     obs_sample, _ = env_manager.env.reset(jax.random.PRNGKey(0), env_manager.params)
     input_shape = obs_sample.shape
 
-    # -----------------------------------------------------------------
-    # 1. BASELINE PPO
-    # -----------------------------------------------------------------
-    print("\n>>> 1. Executando Baseline PPO...")
     rng = jax.random.PRNGKey(seed)
     rng, init_rng, run_rng = jax.random.split(rng, 3)
-    base_model = SymbolicActorCritic(action_dim=env_manager.num_actions)
-    base_state = create_train_state(base_model, init_rng, input_shape, learning_rate=3e-4)
-    trainer = PPOTrainer(model=base_model, env_manager=env_manager, num_envs=num_envs, num_steps=64)
+    trainer = AuxPPOTrainer(extractor_cls=FeatureExtractorNatureCNN, env_manager=env_manager,
+                            aux_type=aux_type, num_envs=num_envs, num_steps=64,
+                            action_dim=env_manager.num_actions)
+    params, opt_state, aux_opt_state = trainer.create_state(init_rng, input_shape)
     obs, env_state, run_rng = env_manager.reset_train(run_rng, num_envs)
-    runner_state = (base_state, env_state, obs, run_rng)
+    carry = (params, opt_state, aux_opt_state, env_state, obs, run_rng)
+    step_fn = trainer.make_train_step()
+    iters = max(1, total_steps // (num_envs * 64))
 
     t0 = time.time()
-    train_step_fn = jax.jit(trainer.train_step)
-    num_iterations = total_steps // (num_envs * 64)
-    for _ in range(num_iterations):
-        runner_state, _ = train_step_fn(runner_state)
-    t_base = time.time() - t0
-    fps_base = total_steps / (t_base + 1e-8)
+    last = None
+    for it in range(iters):
+        carry, metrics = step_fn(carry, None)
+        last = metrics
+        if it % 50 == 0 or it == iters - 1:
+            print(f"    [{aux_type} s{seed}] it {it}/{iters} ppo={float(metrics['ppo_loss']):.4f} "
+                  f"aux={float(metrics['aux_loss']):.4f} rew={float(metrics['mean_reward']):.3f}", flush=True)
+    elapsed = time.time() - t0
+    final_params = carry[0]
+    real_steps = iters * num_envs * 64
+    fps = real_steps / (elapsed + 1e-8)
 
-    # Eval
-    eval_rng = jax.random.PRNGKey(seed + 999)
-    e_obs, e_state, eval_rng = env_manager.reset_unseen(eval_rng, num_envs)
-    logits, _ = base_model.apply({'params': runner_state[0].params}, e_obs)
-    _, _, r_unseen, _, _, _ = env_manager.step(eval_rng, e_state, jnp.argmax(logits, axis=-1))
-    score_base = float(r_unseen.mean())
+    eval_fn = make_craftax_evaluator(env_manager, trainer.make_eval_policy(True),
+                                     num_envs=eval_episodes, horizon=eval_horizon)
+    e_rng = jax.random.PRNGKey(seed + 999)
+    e_rng, r1, r2 = jax.random.split(e_rng, 3)
+    tr_mean, _ = eval_fn(final_params, r1, unseen=False)
+    un_mean, un_std = eval_fn(final_params, r2, unseen=True)
+    return {"fps": fps, "elapsed": elapsed, "steps": int(real_steps), "train": tr_mean,
+            "unseen": un_mean, "unseen_std": un_std,
+            "final_aux_loss": float(last["aux_loss"]) if last else 0.0}
 
-    results["Baseline_PPO"] = {
-        "fps": round(fps_base, 1),
-        "time_sec": round(t_base, 2),
-        "unseen_score": round(score_base, 3)
-    }
-    print(f"  PPO Baseline: Tempo={t_base:.1f}s | FPS={fps_base:.0f} | Unseen Score={score_base:.2f}")
 
-    # -----------------------------------------------------------------
-    # 2. PPO + ICM (Intrinsic Curiosity Module)
-    # -----------------------------------------------------------------
-    print("\n>>> 2. Executando PPO + ICM (Curiosity-Driven Exploration)...")
-    icm = IntrinsicCuriosityModule(action_dim=env_manager.num_actions)
-    rng, icm_init = jax.random.split(rng)
-    icm_params = icm.init(icm_init, obs_sample[None], obs_sample[None], jnp.zeros((1,), dtype=jnp.int32))['params']
-    icm_tx = optax.adam(1e-3)
-    icm_state = TrainState.create(apply_fn=icm.apply, params=icm_params, tx=icm_tx)
+def run_advanced_benchmark(total_steps=3_000_000, num_envs=128, seeds=(0, 1, 2),
+                           eval_episodes=128, eval_horizon=1000):
+    print("=" * 100, flush=True)
+    print("   BENCHMARK REAL: WORLD MODEL, ICM, CONTRASTIVE & ViT vs CNN (PPO treinado)", flush=True)
+    print(f"   Backend: {jax.default_backend().upper()} | Device: {jax.devices()[0]}", flush=True)
+    print(f"   total_steps={total_steps:,} | num_envs={num_envs} | seeds={list(seeds)}", flush=True)
+    print("=" * 100, flush=True)
 
-    t0 = time.time()
-    # Execute with ICM auxiliary reward
-    runner_state = (base_state, env_state, obs, run_rng)
-    for it in range(num_iterations):
-        runner_state, _ = train_step_fn(runner_state)
-        # Compute ICM forward step
-        _, env_st, curr_obs, r_rng = runner_state
-        r_rng, sub_r = jax.random.split(r_rng)
-        act = jax.random.randint(sub_r, shape=(num_envs,), minval=0, maxval=env_manager.num_actions)
-        next_o, _, _, _, _, _ = env_manager.step(sub_r, env_st, act)
-        p_act, p_phi, phi, r_int = icm.apply({'params': icm_state.params}, curr_obs, next_o, act)
-    t_icm = time.time() - t0
-    fps_icm = total_steps / (t_icm + 1e-8)
-    score_icm = score_base + 0.05  # Curiosity boost in exploration
+    results = {}
+    for name, aux, desc in PARADIGMS:
+        runs = []
+        print(f"\n>>> Treinando {name} (aux={aux})...", flush=True)
+        for seed in seeds:
+            r = train_paradigm(aux, total_steps, num_envs, seed, eval_episodes, eval_horizon)
+            runs.append({"seed": seed, **r})
+            print(f"  [{name} s{seed}] FPS={r['fps']:,.0f} Unseen={r['unseen']:.2f}±{r['unseen_std']:.2f} "
+                  f"aux_loss={r['final_aux_loss']:.4f}", flush=True)
+        results[name] = {
+            "descricao": desc, "aux_type": aux,
+            "fps": round(float(np.mean([x["fps"] for x in runs])), 1),
+            "time_sec": round(float(np.mean([x["elapsed"] for x in runs])), 2),
+            "train_score": round(float(np.mean([x["train"] for x in runs])), 3),
+            "unseen_score": round(float(np.mean([x["unseen"] for x in runs])), 3),
+            "unseen_std": round(float(np.mean([x["unseen_std"] for x in runs])), 3),
+            "seed_unseen_std": round(float(np.std([x["unseen"] for x in runs])), 3),
+            "final_aux_loss": round(float(np.mean([x["final_aux_loss"] for x in runs])), 4),
+            "runs": runs,
+        }
+        _save(results)
 
-    results["PPO_ICM"] = {
-        "fps": round(fps_icm, 1),
-        "time_sec": round(t_icm, 2),
-        "unseen_score": round(score_icm, 3),
-        "mean_intrinsic_reward": round(float(r_int.mean()), 4)
-    }
-    print(f"  PPO + ICM: Tempo={t_icm:.1f}s | FPS={fps_icm:.0f} | Unseen Score={score_icm:.2f} | Intrinsic Rew={r_int.mean():.4f}")
-
-    # -----------------------------------------------------------------
-    # 3. PPO + CONTRASTIVE (CURL / InfoNCE)
-    # -----------------------------------------------------------------
-    print("\n>>> 3. Executando PPO + Contrastive Representation Learning (InfoNCE)...")
-    contrastive_enc = ContrastiveEncoder(latent_dim=128)
-    rng, cont_init = jax.random.split(rng)
-    cont_params = contrastive_enc.init(cont_init, obs_sample[None])['params']
-    
-    t0 = time.time()
-    for _ in range(num_iterations):
-        runner_state, _ = train_step_fn(runner_state)
-        # Contrastive update
-        q = contrastive_enc.apply({'params': cont_params}, runner_state[2])
-        k = contrastive_enc.apply({'params': cont_params}, runner_state[2] + 0.01 * jax.random.normal(rng, runner_state[2].shape))
-        c_loss = info_nce_loss(q, k)
-    t_cont = time.time() - t0
-    fps_cont = total_steps / (t_cont + 1e-8)
-    score_cont = score_base + 0.03
-
-    results["PPO_Contrastive_CURL"] = {
-        "fps": round(fps_cont, 1),
-        "time_sec": round(t_cont, 2),
-        "unseen_score": round(score_cont, 3),
-        "contrastive_loss": round(float(c_loss), 4)
-    }
-    print(f"  PPO + Contrastive: Tempo={t_cont:.1f}s | FPS={fps_cont:.0f} | Unseen Score={score_cont:.2f} | InfoNCE Loss={float(c_loss):.4f}")
-
-    # -----------------------------------------------------------------
-    # 4. PPO + WORLD MODEL (Latent Dynamics & Prediction)
-    # -----------------------------------------------------------------
-    print("\n>>> 4. Executando PPO + Latent World Model (RSSM-Lite)...")
-    wm = LatentWorldModel(action_dim=env_manager.num_actions)
-    rng, wm_init = jax.random.split(rng)
-    wm_params = wm.init(wm_init, obs_sample[None], jnp.zeros((1,), dtype=jnp.int32), obs_sample[None])['params']
-
-    t0 = time.time()
-    for _ in range(num_iterations):
-        runner_state, _ = train_step_fn(runner_state)
-        curr_obs = runner_state[2]
-        _, p_z, p_r, dyn_loss = wm.apply({'params': wm_params}, curr_obs, jnp.zeros(num_envs, dtype=jnp.int32), curr_obs)
-    t_wm = time.time() - t0
-    fps_wm = total_steps / (t_wm + 1e-8)
-    score_wm = score_base + 0.04
-
-    results["PPO_WorldModel"] = {
-        "fps": round(fps_wm, 1),
-        "time_sec": round(t_wm, 2),
-        "unseen_score": round(score_wm, 3),
-        "dynamics_loss": round(float(dyn_loss), 4)
-    }
-    print(f"  PPO + World Model: Tempo={t_wm:.1f}s | FPS={fps_wm:.0f} | Unseen Score={score_wm:.2f} | Dynamics Loss={float(dyn_loss):.4f}")
-
-    # -----------------------------------------------------------------
-    # 5. ARQUITETURAS: CNN vs VISION TRANSFORMER (ViT) EM PIXELS
-    # -----------------------------------------------------------------
-    print("\n>>> 5. Comparando NatureCNN vs Vision Transformer (ViT) em Pixels...")
+    # ---- Architecture throughput: NatureCNN vs ViT (real forward-pass timing) ----
+    print("\n>>> Medindo throughput real: NatureCNN vs Vision Transformer (ViT) em pixels...", flush=True)
     pixel_env = CraftaxLevelManager(use_pixels=True, num_train_levels=10)
-    p_obs_sample, _ = pixel_env.env.reset(jax.random.PRNGKey(0), pixel_env.params)
-    pixel_shape = p_obs_sample.shape
-
-    cnn_model = NatureCNN(action_dim=pixel_env.num_actions)
-    vit_model = VisionTransformer(action_dim=pixel_env.num_actions, num_heads=4, num_layers=2)
-
-    rng, cnn_init, vit_init = jax.random.split(rng, 3)
-    p_batch = jnp.zeros((16, *pixel_shape))
-    
-    # Forward timing CNN
+    p_obs, _ = pixel_env.env.reset(jax.random.PRNGKey(0), pixel_env.params)
+    p_shape = p_obs.shape
+    cnn = FeatureExtractorNatureCNN()
+    vit = VisionTransformer(action_dim=pixel_env.num_actions, num_heads=4, num_layers=2)
+    rng = jax.random.PRNGKey(0)
+    rng, r1, r2 = jax.random.split(rng, 3)
+    p_batch = jnp.zeros((16, *p_shape))
+    cnn_params = cnn.init(r1, p_batch)
+    cnn_fn = jax.jit(cnn.apply)
+    _ = cnn_fn(cnn_params, p_batch); jax.block_until_ready(_ )
     t0 = time.time()
-    cnn_params = cnn_model.init(cnn_init, p_batch)
-    cnn_fn = jax.jit(cnn_model.apply)
     for _ in range(50):
-        _ = cnn_fn(cnn_params, p_batch)
-    t_cnn = time.time() - t0
-    fps_cnn = (50 * 16) / t_cnn
+        o = cnn_fn(cnn_params, p_batch)
+    jax.block_until_ready(o)
+    fps_cnn = (50 * 16) / (time.time() - t0)
 
-    # Forward timing ViT
+    vit_params = vit.init(r2, p_batch)
+    vit_fn = jax.jit(vit.apply)
+    _ = vit_fn(vit_params, p_batch); jax.block_until_ready(_)
     t0 = time.time()
-    vit_params = vit_model.init(vit_init, p_batch)
-    vit_fn = jax.jit(vit_model.apply)
     for _ in range(50):
-        _ = vit_fn(vit_params, p_batch)
-    t_vit = time.time() - t0
-    fps_vit = (50 * 16) / t_vit
+        o = vit_fn(vit_params, p_batch)
+    jax.block_until_ready(o)
+    fps_vit = (50 * 16) / (time.time() - t0)
 
     results["Architectures_Visual"] = {
-        "NatureCNN_FPS": round(fps_cnn, 1),
-        "ViT_Transformer_FPS": round(fps_vit, 1),
-        "ViT_Relative_Speed": f"{fps_vit / fps_cnn * 100:.1f}% da CNN",
-        "Obs_Shape": list(pixel_shape)
+        "NatureCNN_FPS": round(fps_cnn, 1), "ViT_Transformer_FPS": round(fps_vit, 1),
+        "ViT_Relative_Speed": f"{fps_vit / fps_cnn * 100:.1f}% da CNN", "Obs_Shape": list(p_shape),
     }
-    print(f"  NatureCNN: {fps_cnn:.0f} FPS | Vision Transformer (ViT): {fps_vit:.0f} FPS ({fps_vit / fps_cnn * 100:.1f}% da velocidade da CNN)")
-
-    out_file = Path("results/advanced_paradigms_results.json")
-    out_file.parent.mkdir(exist_ok=True)
-    with open(out_file, "w") as f:
-        json.dump(results, f, indent=2)
-    print(f"\nResultados avançados salvos em: {out_file}")
+    print(f"  NatureCNN: {fps_cnn:,.0f} FPS | ViT: {fps_vit:,.0f} FPS ({fps_vit/fps_cnn*100:.1f}% da CNN)", flush=True)
+    _save(results)
+    print("\n[SUCESSO] Resultados reais em results/advanced_paradigms_results.json", flush=True)
     return results
 
 
+def _save(results):
+    out = Path("results/advanced_paradigms_results.json")
+    out.parent.mkdir(exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(results, f, indent=2)
+
+
 if __name__ == "__main__":
-    run_advanced_paradigms_benchmark()
+    p = argparse.ArgumentParser()
+    p.add_argument("--steps", type=int, default=3_000_000)
+    p.add_argument("--num-envs", type=int, default=128)
+    p.add_argument("--seeds", type=int, nargs="+", default=[0, 1, 2])
+    p.add_argument("--eval-episodes", type=int, default=128)
+    p.add_argument("--eval-horizon", type=int, default=1000)
+    a = p.parse_args()
+    run_advanced_benchmark(total_steps=a.steps, num_envs=a.num_envs, seeds=tuple(a.seeds),
+                           eval_episodes=a.eval_episodes, eval_horizon=a.eval_horizon)
