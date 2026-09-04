@@ -11,14 +11,14 @@ import jax
 import jax.numpy as jnp
 
 
-def make_augment(kind):
+def make_augment(kind, p=0.5):
     if kind in (None, "none"):
         return None
 
     @jax.jit
     def aug(x, key):
         k1, k2, k3 = jax.random.split(key, 3)
-        do = jax.random.uniform(k1) < 0.5
+        do = jax.random.uniform(k1) < p
         if kind == "crop":
             y = jnp.pad(x, ((0, 0), (4, 4), (4, 4), (0, 0)), mode="edge")
             top = jax.random.randint(k2, (), 0, 9)

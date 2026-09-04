@@ -130,6 +130,18 @@ def cells(args):
                                 "game": "coinrun", "seed": s, "timesteps": 50000,
                                 "extractor": cfg, "augment": "none",
                                 "explore": "none"})
+        elif suite == "spr":
+            # EXTENSAO alem do estudo (sem paridade §1-12): SPR aux.
+            for cfg in ("spr", "spr_aug"):
+                for game in (args.games or MAIN_GAMES):
+                    for s in args.seeds:
+                        for t in args.timesteps:
+                            out.append({"suite": suite, "cfg": cfg,
+                                        "kind": "ppo", "game": game, "seed": s,
+                                        "timesteps": t, "extractor": "classic",
+                                        "augment": "crop" if cfg == "spr_aug"
+                                        else "none",
+                                        "explore": "none", "aux": "spr"})
     return out
 
 
@@ -163,7 +175,8 @@ def run_cell(cell, args):
         game=cell["game"], algo=algo, extractor=cell["extractor"],
         distribution=cell.get("distribution", "easy"),
         obs=None, augment=cell.get("augment", "none"),
-        explore=cell.get("explore", "none"), timesteps=cell["timesteps"],
+        explore=cell.get("explore", "none"), aux=cell.get("aux", "none"),
+        timesteps=cell["timesteps"],
         seed=cell["seed"], num_envs=args.num_envs, rollout=128,
         minibatch=1024, eval_eps=ee[0], eval_det_eps=ee[1],
         eval_train_eps=ee[2], eval_envs=8, out=path)
@@ -175,7 +188,7 @@ def main():
     ap.add_argument("--suite", nargs="+",
                     default=["main"],
                     choices=["main", "exploration", "algo", "hrl", "budget",
-                             "hard", "pilot"])
+                             "hard", "pilot", "spr"])
     ap.add_argument("--games", nargs="*", default=None)
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--timesteps", type=int, nargs="+", default=[100000])

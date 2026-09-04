@@ -38,6 +38,18 @@ from jax_port.networks import ActorCritic, preprocess
 from jax_port.ppo import compute_gae, make_optimizer, make_update_fn
 
 
+def backbone_params(params):
+    return params["params"]["backbone"]
+
+
+def with_backbone(params, bb):
+    inner = dict(params["params"])
+    inner["backbone"] = bb
+    outer = dict(params)
+    outer["params"] = inner
+    return outer
+
+
 def to_vector(rgb):
     """(N,64,64,3) uint8 -> (N,256) uint8: luminancia + mean-pool 4x.
 
@@ -107,6 +119,25 @@ def train(args):
     aug = make_augment(args.augment)
     if args.augment != "none" or args.explore != "none":
         assert mode == "pixels", "augment/exploracao sao so-pixels (estudo)"
+    spr = None
+    if args.aux == "spr":
+        assert mode == "pixels" and args.extractor not in ("mlp", "vae"), \
+            "SPR: backbone CNN pixels (extensao)"
+        from jax_port.spr import make_spr
+        spr = make_spr(BACKBONES[args.extractor])
+        key, ks0 = jax.random.split(key)
+        tr_p = spr["trans"].init(ks0, jnp.zeros((1, 512 + 15)))
+        spr_os_b = spr["opt_b"].init(backbone_params(params))
+        spr_os_t = spr["opt_t"].init(tr_p)
+        spr_tgt = backbone_params(params)
+        key, kw2 = jax.random.split(key)
+        (bb0, spr_os_b, tr_p, spr_os_t, _) = spr["step"](
+            backbone_params(params), spr_os_b, tr_p, spr_os_t, spr_tgt,
+            jnp.zeros((256, 64, 64, 3), jnp.uint8),
+            jnp.zeros((256,), jnp.int32),
+            jnp.zeros((256, 64, 64, 3), jnp.uint8), kw2)
+        spr_tgt = spr["ema"](spr_tgt, bb0)
+        spr_loss_acc = []
     exp = (Exploration(args.explore, N, seed=args.seed)
            if args.explore != "none" else None)
     if exp is not None:
@@ -120,6 +151,8 @@ def train(args):
 
     for it in range(n_iters):
         b_obs = np.empty((T, N) + oshape, np.uint8)
+        b_obs2 = (np.empty((T, N) + oshape, np.uint8) if spr is not None
+                  else None)
         b_act = np.empty((T, N), np.int32)
         b_rew = np.empty((T, N), np.float32)
         b_done = np.empty((T, N), bool)
@@ -140,6 +173,8 @@ def train(args):
             env.act(act)
             rew, obs_d, first = env.observe()
             obs = get_obs(obs_d, mode)
+            if b_obs2 is not None:
+                b_obs2[t] = obs
             b_rew[t], b_done[t] = np.asarray(rew, np.float32), np.asarray(first)
             if exp is not None:
                 b_rew[t] = exp.step(b_obs[t], act, b_rew[t], obs, b_done[t])
@@ -181,6 +216,29 @@ def train(args):
                     jnp.asarray(adv_n[mb], device=device),
                     jnp.asarray(F[4][mb], device=device), kz)
         ph["update"] += time.perf_counter() - t_upd0
+        spr_loss = None
+        if spr is not None:
+            # Fase SPR: pares (o_t, a_t, o_{t+1}) em 4 chunks de 2048.
+            P1 = flat(b_obs).reshape(T * N, *oshape)
+            P2 = flat(b_obs2).reshape(T * N, *oshape)
+            A1 = flat(b_act).astype(np.int32)
+            pi = rng.permutation(T * N)
+            ls = []
+            for s in range(0, T * N, 2048):
+                mb = pi[s:s + 2048]
+                key, kz = jax.random.split(key)
+                bb_cur = backbone_params(state[0])
+                (bb_new, spr_os_b, tr_p, spr_os_t, l) = spr["step"](
+                    bb_cur, spr_os_b, tr_p, spr_os_t, spr_tgt,
+                    jnp.asarray(P1[mb], device=device),
+                    jnp.asarray(A1[mb], device=device),
+                    jnp.asarray(P2[mb], device=device), kz)
+                jax.block_until_ready(l)
+                state = (with_backbone(state[0], bb_new), state[1])
+                ls.append(float(l))
+            spr_tgt = spr["ema"](spr_tgt, backbone_params(state[0]))
+            spr_loss = float(np.mean(ls))
+            spr_loss_acc.append(spr_loss)
         done_steps += T * N
         if (it + 1) % 5 == 0 or done_steps >= args.timesteps:
             el = time.perf_counter() - t0
@@ -195,11 +253,14 @@ def train(args):
     out = {"game": args.game, "seed": args.seed, "algo": args.algo,
            "extractor": args.extractor,
            "obs_mode": mode, "augment": args.augment, "explore": args.explore,
+           "aux": args.aux,
            "timesteps": done_steps,
            "wall_s": round(dt, 1), "sps": round(done_steps / dt, 1),
            "train_episodes": len(ep_rets),
            "train_ret_mean20": float(np.mean(ep_rets[-20:])) if ep_rets else 0.0,
            "curve": curve,
+           "spr_loss_mean": (float(np.mean(spr_loss_acc))
+                             if spr is not None and spr_loss_acc else None),
            "hparams": {"algo": args.algo, "lr": 3e-4, "gamma": 0.99,
                        "lambda": lam, "clip": None if a2c else 0.2,
                        "epochs": epochs, "num_envs": N, "rollout": T,
@@ -270,6 +331,9 @@ def main():
                     choices=["none", "crop", "color", "noise"])
     ap.add_argument("--explore", default="none",
                     choices=["none", "icm", "rnd", "ngu"])
+    ap.add_argument("--aux", default="none",
+                    choices=["none", "spr"],
+                    help="spr = extensao alem do estudo (suite spr)")
     ap.add_argument("--timesteps", type=int, default=100000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--num-envs", type=int, default=64)
