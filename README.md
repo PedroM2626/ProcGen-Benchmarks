@@ -655,6 +655,18 @@ Fonte: `jax_port/pa1_throughput.json`. Avisos `gym`/`np.bool8` durante o bench s
 
 **Próximo passo (paridade PA2).** Grade multi-seed com o protocolo definitivo do estudo (eval `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e demais extratores em Flax; barra de aceitação inalterada: **reproduzir ordenação e barras de erro dentro do ruído entre-seeds**.
 
+### 15.3. Benchmark pareado justo — mesma máquina, mesmo dia (05/09/2026, `coinrun`, 100k, seed 42)
+
+Exigência do autor: nada de número impreciso. Protocolo: wall só do `learn()`/loop de treino (sem construção de envs, eval, salvamento ou TensorBoard em nenhum braço); hparams PPO idênticos (lr 3e-4, n_steps 256, 3 epochs, γ 0.99, λ 0.95, clip 0.2); sequencial na mesma RTX 4070 Laptop. Braços: **A** SB3 fiel ao estudo (`DummyVecEnv` n=1, batch 64, `bench_sb3_paired.py`); **B** SB3 paralelo (`SubprocVecEnv` n=64, batch 1024 — mesmo ajuste de batching do porte); **C** JAX (`jax_port/train.py`, 64 envs `gym3`, batch 1024). Correção de ambiente revelada pelo pareamento: o torch do Windows estava CPU-only (`2.13.0+cpu`) e foi restaurado para o pino do estudo (`2.5.1+cu121`, `cuda=True`) antes de medir.
+
+| Braço | Steps | Wall treino | **SPS** | Fonte |
+|---|---|---:|---:|---|
+| A SB3 n=1 / batch 64 (estudo) | 100.096 | 175,5 s | **570** | `jax_port/paired_sb3_n1.json` |
+| B SB3 n=64 / batch 1024 | 114.688 | 16,8 s | **6.838** | `jax_port/paired_sb3_n64.json` |
+| C JAX n=64 / batch 1024 (hoje) | 106.496 | 14,2 s | **7.506** | `jax_port/pa2_coinrun_100k_rerun.json` |
+
+> **Decomposição honesta do "brutal" (~30–70x sobre os ~120–170 SPS reportados):** (1) ~4x é overhead ausente no pareado — os runs do estudo carregavam TensorBoard + eval callbacks + outra carga de máquina (570 pareado vs ~120–170 reportado, mesma config A). (2) ~12x é paralelismo — A→B (570→6.838), disponível a qualquer framework. (3) **~1,1x é framework+env** — B→C (6.838→7.506), torch/`SubprocVecEnv` vs JAX/`gym3` em C++. Ou seja: o JAX é ~15x mais rápido que a config do estudo em condições pareadas (7.506/570), mas só ~10% mais rápido que um SB3 igualmente paralelizado — o grosso do ganho veio do batching, não do XLA. Ressalvas restantes: SB3 rodou no Windows nativo e o JAX no WSL2 (mesma GPU, runtimes distintos); SPS varia ~10% entre runs (C ontem: 8.647, hoje: 7.506).
+
 ### 15.2. PA2-velocidade — treino PPO real a 7–8,6k SPS (04/09/2026, `/root/procgen-jax`, WSL2, RTX 4070 Laptop)
 
 Learner: `jax_port/networks.py` (NatureCNN fiel a `models/sb3_extractors.py:8`, layout NHWC), `jax_port/ppo.py` (surrogate clipado + value-clip + entropia; lr 3e-4, γ 0.99, λ 0.95, clip 0.2, 3 epochs, vf 0.5, ent 0.01, grad-clip 0.5, adv-norm — hparams do estudo em `compare_suite.py:26`), `jax_port/train.py` (64 envs C++ `gym3`, rollout 128, minibatch 1024). Ajustes só de batching: n_envs 64 (estudo: 1), minibatch 1024 (estudo: 64), adv-norm 1x/epoca no host.
@@ -673,7 +685,7 @@ wsl -e env PYTHONPATH=/mnt/c/Users/Acer/Downloads/MLE \
 
 Fontes: `jax_port/pa2_coinrun_100k.json`, `jax_port/pa2_starpilot_100k.json` (fases `rollout`/`gae`/`update` registradas no JSON). Curva intra-run: 4,9k → 7,1k → 7,6k SPS (rampa conforme o init é amortizado).
 
-> **Leitura honesta:** (1) a meta de 3–5k foi **superada com treino real** (gradientes incluídos), não só pipeline — 100k steps em ~12–15 s vs ~7–10 min no SB3. (2) Os speedups (~30–70x) comparam SPS medido aqui contra tempos reportados nas seções 1–2, em hardwares/épocas distintos mas mesma máquina (RTX 4070 Laptop) — ordem de grandeza, não cronometragem pareada. (3) Custos únicos fora da medida de SPS: autotune cuDNN/XLA (~3,5 min, uma vez, cache persistente em `/tmp/jax_port_cache`) + init GPU/allocator (~4 s por processo). (4) **Não é paridade científica ainda**: 1 seed, eval 10 eps, só NatureCNN — os retornos (coinrun eval 3,0 vs 7,6–8,0 do estudo; starpilot 1,9 vs ~2,0) são prova de aprendizado, não equivalência. (5) Armadilha documentada: gather com índice no device (`d_obs[d_mb]`) mediu 457ms/call vs 12ms/call com slicing no host + H2D contíguo (~40x) — o loop usa o caminho rápido (`train.py`, `ppo.py`).
+> **Leitura honesta:** (1) a meta de 3–5k foi **superada com treino real** (gradientes incluídos), não só pipeline — 100k steps em ~12–15 s vs ~7–10 min no SB3. Os speedups da tabela acima comparam contra tempos reportados; a decomposição rigorosa (pareada, mesma máquina/dia) está em §15.3 e reduz o efeito-framework a ~1,1x sobre SB3 paralelizado. (3) Custos únicos fora da medida de SPS: autotune cuDNN/XLA (~3,5 min, uma vez, cache persistente em `/tmp/jax_port_cache`) + init GPU/allocator (~4 s por processo). (4) **Não é paridade científica ainda**: 1 seed, eval 10 eps, só NatureCNN — os retornos (coinrun eval 3,0 vs 7,6–8,0 do estudo; starpilot 1,9 vs ~2,0) são prova de aprendizado, não equivalência. (5) Armadilha documentada: gather com índice no device (`d_obs[d_mb]`) mediu 457ms/call vs 12ms/call com slicing no host + H2D contíguo (~40x) — o loop usa o caminho rápido (`train.py`, `ppo.py`).
 
 **Riscos conhecidos para a paridade.** Paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k` — agora ~2–4 h de treino em vez de dias). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
 

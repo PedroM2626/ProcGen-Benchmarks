@@ -1,0 +1,13 @@
+{
+  "framework": "sb3",
+  "game": "coinrun",
+  "seed": 42,
+  "vec": "dummy",
+  "n_envs": 1,
+  "batch_size": 64,
+  "timesteps": 100096,
+  "wall_learn_s": 175.5,
+  "sps": 570.4,
+  "torch": "2.5.1+cu121",
+  "cuda": true
+}
