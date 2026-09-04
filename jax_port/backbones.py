@@ -240,6 +240,68 @@ class VAEBackbone(nn.Module):
         return nn.relu(nn.Dense(512)(z))
 
 
+class GATPatch(nn.Module):
+    """EXTENSAO alem do estudo (como SPR): grafo sobre patches 8x8.
+
+    64 nos (patch 8x8x3 -> embed 128 + pos), vizinhanca grade
+    4-conectada + self, 2x GAT (4 heads x 32D) com residual + LayerNorm,
+    mean-pool global -> FC512. Atencao densa mascarada (64x64 barato).
+    """
+    patch: int = 8
+    dim: int = 128
+    heads: int = 4
+    layers: int = 2
+
+    @nn.compact
+    def __call__(self, x):
+        b, h, w, c = x.shape
+        p, g = self.patch, h // self.patch
+        n = g * g
+        nodes = x.reshape(b, g, p, g, p, c).transpose(0, 1, 3, 2, 4, 5)
+        nodes = nodes.reshape(b, n, p * p * c)
+        h0 = nn.Dense(self.dim)(nodes)
+        pos = self.param("pos_emb", nn.initializers.normal(0.02),
+                         (1, n, self.dim))
+        h0 = h0 + pos
+        # mascara de vizinhanca (grade 4-conectada + self), estatica
+        idx = jnp.arange(n)
+        r, c_ = idx // g, idx % g
+        man = jnp.abs(r[:, None] - r[None, :]) + jnp.abs(c_[:, None] - c_[None, :])
+        mask = (man <= 1)[None, None, :, :]  # (1,1,N,N)
+        h_ = h0
+        for _ in range(self.layers):
+            h_ = _GATLayer(self.dim, self.heads, mask)(h_)
+        return nn.relu(nn.Dense(512)(h_.mean(axis=1)))
+
+
+class _GATLayer(nn.Module):
+    dim: int
+    heads: int
+    mask: jnp.ndarray
+
+    @nn.compact
+    def __call__(self, x):
+        d = self.dim // self.heads
+        outs = []
+        for _ in range(self.heads):
+            wh = nn.Dense(d)(x)  # (B,N,d)
+            n_n = wh.shape[1]
+            a = self.param("att_" + str(len(outs)),
+                           nn.initializers.normal(0.1), (2 * d,))
+            e = jnp.concatenate(
+                [jnp.repeat(wh, n_n, axis=1),
+                 jnp.tile(wh, (1, n_n, 1))], axis=-1)  # (B,N*N,2d)
+            e = nn.leaky_relu(e @ a, negative_slope=0.2).reshape(
+                wh.shape[0], n_n, n_n)  # (B,N,N)
+            e = jnp.where(self.mask.squeeze((0, 1)), e, -1e9)
+            alpha = jax.nn.softmax(e, axis=-1)
+            outs.append(alpha @ wh)
+        h = jnp.concatenate(outs, axis=-1)
+        if h.shape[-1] != x.shape[-1]:
+            x = nn.Dense(h.shape[-1])(x)
+        return nn.LayerNorm()(x + h)
+
+
 BACKBONES = {
     "classic": ClassicCNN,
     "cbam": CBAMCnn,
@@ -251,6 +313,8 @@ BACKBONES = {
     "mlp": MlpBackbone,
     "lstm_attention": LSTMAttention,
     "vae": VAEBackbone,
+    # EXTENSAO (fora do estudo, como SPR): GAT sobre patches.
+    "gat": GATPatch,
     # Gemeos de treino (achado documentado): AE/Recon forward == classic;
     # contrastive == classic + noise (usar com --augment noise).
     "ae": ClassicCNN,

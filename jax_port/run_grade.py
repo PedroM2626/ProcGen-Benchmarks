@@ -142,6 +142,15 @@ def cells(args):
                                         "augment": "crop" if cfg == "spr_aug"
                                         else "none",
                                         "explore": "none", "aux": "spr"})
+        elif suite == "gnn":
+            # EXTENSAO alem do estudo (sem paridade §1-12): GAT patches.
+            for game in (args.games or MAIN_GAMES):
+                for s in args.seeds:
+                    for t in args.timesteps:
+                        out.append({"suite": suite, "cfg": "gat",
+                                    "kind": "ppo", "game": game, "seed": s,
+                                    "timesteps": t, "extractor": "gat",
+                                    "augment": "none", "explore": "none"})
     return out
 
 
@@ -188,7 +197,7 @@ def main():
     ap.add_argument("--suite", nargs="+",
                     default=["main"],
                     choices=["main", "exploration", "algo", "hrl", "budget",
-                             "hard", "pilot", "spr"])
+                             "hard", "pilot", "spr", "gnn"])
     ap.add_argument("--games", nargs="*", default=None)
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--timesteps", type=int, nargs="+", default=[100000])
