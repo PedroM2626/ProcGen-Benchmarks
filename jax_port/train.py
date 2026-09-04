@@ -70,7 +70,7 @@ def train(args):
           f"extractor={args.extractor} obs={mode}")
 
     env = ProcgenGym3Env(num=args.num_envs, env_name=args.game,
-                         num_levels=200, distribution_mode="easy",
+                         num_levels=200, distribution_mode=args.distribution,
                          rand_seed=args.seed)
     n_actions = 15
     stoch = args.extractor == "vae"
@@ -231,7 +231,7 @@ def evaluate(state, forward_fn, args, device, mode, num_levels, seed,
     como no estudo)."""
     ev = ProcgenGym3Env(num=args.eval_envs, env_name=args.game,
                         num_levels=num_levels,
-                        distribution_mode="easy", rand_seed=seed)
+                        distribution_mode=args.distribution, rand_seed=seed)
     _, obs_d, _ = ev.observe()
     obs = get_obs(obs_d, mode)
     key = jax.random.PRNGKey(seed)
@@ -262,6 +262,7 @@ def evaluate(state, forward_fn, args, device, mode, num_levels, seed,
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--game", default="coinrun")
+    ap.add_argument("--distribution", default="easy", choices=["easy", "hard"])
     ap.add_argument("--algo", default="ppo", choices=["ppo", "a2c"])
     ap.add_argument("--extractor", default="classic", choices=sorted(BACKBONES))
     ap.add_argument("--obs", default=None, choices=[None, "pixels", "vector"])

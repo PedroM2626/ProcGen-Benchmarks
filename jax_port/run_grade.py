@@ -33,6 +33,9 @@ HRL_ARMS = ["flat", "skip4", "hrl", "hrl_learned"]
 HRL_GAMES = ["jumper", "plunder"]
 BUDGET_CONFIGS = ["resnet18", "mlp"]
 BUDGET_GAMES = ["starpilot", "dodgeball"]
+HARD_CONFIGS = ["classic", "cbam", "spatial", "mlp", "vae", "ae", "recon",
+                "contrastive", "aug_crop", "aug_color", "aug_noise"]
+PILOT_CONFIGS = ["classic", "cbam", "spatial", "mlp"]
 
 AUG_OF = {"aug_crop": "crop", "aug_color": "color", "aug_noise": "noise"}
 
@@ -104,6 +107,29 @@ def cells(args):
                                         "kind": "ppo", "game": game, "seed": s,
                                         "timesteps": t, "extractor": cfg,
                                         "augment": "none", "explore": "none"})
+        elif suite == "hard":
+            # Stress test §3.4: mesmas 11 configs da suite, modo hard.
+            for cfg in HARD_CONFIGS:
+                ext = {"aug_crop": "classic", "aug_color": "classic",
+                       "aug_noise": "classic",
+                       "contrastive": "contrastive"}.get(cfg, cfg)
+                aug = (AUG_OF.get(cfg, "none") if cfg != "contrastive"
+                       else "noise")
+                for s in args.seeds:
+                    for t in args.timesteps:
+                        out.append({"suite": suite, "cfg": cfg, "kind": "ppo",
+                                    "game": "bossfight", "seed": s,
+                                    "timesteps": t, "extractor": ext,
+                                    "augment": aug, "explore": "none",
+                                    "distribution": "hard"})
+        elif suite == "pilot":
+            # Piloto coinrun 50k §3.1 (sempre 50k, como no estudo).
+            for cfg in PILOT_CONFIGS:
+                for s in args.seeds:
+                    out.append({"suite": suite, "cfg": cfg, "kind": "ppo",
+                                "game": "coinrun", "seed": s, "timesteps": 50000,
+                                "extractor": cfg, "augment": "none",
+                                "explore": "none"})
     return out
 
 
@@ -135,6 +161,7 @@ def run_cell(cell, args):
     algo = cell["kind"]  # ppo | a2c
     ns = types.SimpleNamespace(
         game=cell["game"], algo=algo, extractor=cell["extractor"],
+        distribution=cell.get("distribution", "easy"),
         obs=None, augment=cell.get("augment", "none"),
         explore=cell.get("explore", "none"), timesteps=cell["timesteps"],
         seed=cell["seed"], num_envs=args.num_envs, rollout=128,
@@ -145,8 +172,10 @@ def run_cell(cell, args):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--suite", nargs="+", default=["main"],
-                    choices=["main", "exploration", "algo", "hrl", "budget"])
+    ap.add_argument("--suite", nargs="+",
+                    default=["main"],
+                    choices=["main", "exploration", "algo", "hrl", "budget",
+                             "hard", "pilot"])
     ap.add_argument("--games", nargs="*", default=None)
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--timesteps", type=int, nargs="+", default=[100000])
