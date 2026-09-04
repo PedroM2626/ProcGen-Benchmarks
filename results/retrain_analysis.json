@@ -1,0 +1,266 @@
+{
+  "suite_by_game": {
+    "bossfight": {
+      "bossfight_wm_vae": {
+        "stoch": 0.12,
+        "std": 0.15,
+        "det": 0.72,
+        "gap": 0.21,
+        "n": 3
+      },
+      "bossfight_wm_ae": {
+        "stoch": 0.16,
+        "std": 0.2,
+        "det": 0.0,
+        "gap": -0.15,
+        "n": 5
+      },
+      "bossfight_wm_recon": {
+        "stoch": 0.25,
+        "std": 0.32,
+        "det": 0.16,
+        "gap": -0.02,
+        "n": 5
+      },
+      "bossfight_wm_contrastive": {
+        "stoch": 0.48,
+        "std": 0.44,
+        "det": 0.63,
+        "gap": -0.36,
+        "n": 5
+      },
+      "bossfight_cnn_classic": {
+        "stoch": 0.21,
+        "std": 0.39,
+        "det": 0.0,
+        "gap": -0.03,
+        "n": 5
+      },
+      "bossfight_cnn_cbam": {
+        "stoch": 0.4,
+        "std": 0.37,
+        "det": 0.86,
+        "gap": 0.08,
+        "n": 5
+      },
+      "bossfight_cnn_spatial": {
+        "stoch": 0.36,
+        "std": 0.4,
+        "det": 0.7,
+        "gap": -0.19,
+        "n": 5
+      },
+      "bossfight_cnn_mlp_vector": {
+        "stoch": 0.37,
+        "std": 0.66,
+        "det": 0.68,
+        "gap": -0.16,
+        "n": 5
+      },
+      "bossfight_aug_crop": {
+        "stoch": 0.68,
+        "std": 0.59,
+        "det": 0.39,
+        "gap": 0.01,
+        "n": 5
+      },
+      "bossfight_aug_color": {
+        "stoch": 0.2,
+        "std": 0.3,
+        "det": 0.43,
+        "gap": 0.01,
+        "n": 5
+      },
+      "bossfight_aug_noise": {
+        "stoch": 0.48,
+        "std": 0.44,
+        "det": 0.63,
+        "gap": -0.36,
+        "n": 5
+      }
+    },
+    "starpilot": {
+      "starpilot_wm_vae": {
+        "stoch": 1.73,
+        "std": 0.7,
+        "det": 0.73,
+        "gap": 0.0,
+        "n": 2
+      },
+      "starpilot_wm_ae": {
+        "stoch": 2.17,
+        "std": 0.31,
+        "det": 1.31,
+        "gap": 0.03,
+        "n": 5
+      },
+      "starpilot_wm_recon": {
+        "stoch": 1.97,
+        "std": 0.59,
+        "det": 1.13,
+        "gap": -0.31,
+        "n": 5
+      },
+      "starpilot_wm_contrastive": {
+        "stoch": 1.75,
+        "std": 0.78,
+        "det": 0.77,
+        "gap": 0.09,
+        "n": 5
+      },
+      "starpilot_cnn_classic": {
+        "stoch": 2.2,
+        "std": 0.69,
+        "det": 0.93,
+        "gap": -0.33,
+        "n": 5
+      },
+      "starpilot_cnn_cbam": {
+        "stoch": 2.16,
+        "std": 1.08,
+        "det": 0.41,
+        "gap": -0.51,
+        "n": 5
+      },
+      "starpilot_cnn_spatial": {
+        "stoch": 2.63,
+        "std": 0.47,
+        "det": 1.54,
+        "gap": 0.11,
+        "n": 5
+      },
+      "starpilot_cnn_mlp_vector": {
+        "stoch": 2.49,
+        "std": 0.23,
+        "det": 0.96,
+        "gap": 0.33,
+        "n": 5
+      },
+      "starpilot_aug_crop": {
+        "stoch": 2.2,
+        "std": 0.39,
+        "det": 1.17,
+        "gap": -0.09,
+        "n": 5
+      },
+      "starpilot_aug_color": {
+        "stoch": 1.79,
+        "std": 0.82,
+        "det": 0.63,
+        "gap": -0.12,
+        "n": 5
+      },
+      "starpilot_aug_noise": {
+        "stoch": 1.75,
+        "std": 0.78,
+        "det": 0.77,
+        "gap": 0.09,
+        "n": 5
+      }
+    },
+    "dodgeball": {
+      "dodgeball_wm_vae": {
+        "stoch": 0.91,
+        "std": 0.11,
+        "det": 0.69,
+        "gap": 0.13,
+        "n": 5
+      },
+      "dodgeball_wm_ae": {
+        "stoch": 1.05,
+        "std": 0.17,
+        "det": 0.8,
+        "gap": 0.07,
+        "n": 5
+      },
+      "dodgeball_wm_recon": {
+        "stoch": 0.93,
+        "std": 0.09,
+        "det": 0.79,
+        "gap": -0.43,
+        "n": 5
+      },
+      "dodgeball_wm_contrastive": {
+        "stoch": 0.88,
+        "std": 0.33,
+        "det": 0.43,
+        "gap": -0.16,
+        "n": 5
+      },
+      "dodgeball_cnn_classic": {
+        "stoch": 1.07,
+        "std": 0.31,
+        "det": 0.65,
+        "gap": -0.13,
+        "n": 5
+      },
+      "dodgeball_cnn_cbam": {
+        "stoch": 1.15,
+        "std": 0.18,
+        "det": 0.36,
+        "gap": -0.35,
+        "n": 5
+      },
+      "dodgeball_cnn_spatial": {
+        "stoch": 1.07,
+        "std": 0.26,
+        "det": 0.71,
+        "gap": 0.03,
+        "n": 5
+      },
+      "dodgeball_cnn_mlp_vector": {
+        "stoch": 1.21,
+        "std": 0.35,
+        "det": 0.79,
+        "gap": -0.2,
+        "n": 5
+      },
+      "dodgeball_aug_crop": {
+        "stoch": 1.04,
+        "std": 0.35,
+        "det": 0.77,
+        "gap": -0.43,
+        "n": 5
+      },
+      "dodgeball_aug_color": {
+        "stoch": 1.07,
+        "std": 0.31,
+        "det": 0.64,
+        "gap": -0.08,
+        "n": 5
+      },
+      "dodgeball_aug_noise": {
+        "stoch": 0.88,
+        "std": 0.33,
+        "det": 0.43,
+        "gap": -0.16,
+        "n": 5
+      }
+    }
+  },
+  "global_new": {
+    "cnn_classic": 1.16,
+    "wm_vae": 0.92,
+    "wm_ae": 1.13,
+    "aug_noise": 1.04,
+    "wm_recon": 1.05,
+    "cnn_cbam": 1.24,
+    "aug_color": 1.02,
+    "cnn_spatial": 1.35,
+    "aug_crop": 1.31,
+    "cnn_mlp_vector": 1.36,
+    "wm_contrastive": 1.04
+  },
+  "global_old": {
+    "spatial": 1.54,
+    "resnet18": 1.34,
+    "classic": 1.33,
+    "cbam": 1.33,
+    "mlp_vector": 1.25,
+    "lstm_attention": 1.2,
+    "vit": 1.2,
+    "aug_crop": 1.16,
+    "impoola": 1.12,
+    "ae": 1.11
+  }
+}

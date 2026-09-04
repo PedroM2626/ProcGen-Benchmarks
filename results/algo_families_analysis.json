@@ -1,0 +1,98 @@
+{
+  "starpilot_ppo": {
+    "stoch": 2.29,
+    "std": 0.47,
+    "det": 0.64,
+    "train": 2.32,
+    "gap": 0.03,
+    "n": 5
+  },
+  "starpilot_a2c": {
+    "stoch": 2.38,
+    "std": 0.29,
+    "det": 0.89,
+    "train": 2.13,
+    "gap": -0.25,
+    "n": 5
+  },
+  "starpilot_dqn": {
+    "stoch": 0.65,
+    "std": 0.37,
+    "det": 0.63,
+    "train": 0.63,
+    "gap": -0.03,
+    "n": 5
+  },
+  "starpilot_qrdqn": {
+    "stoch": 1.04,
+    "std": 0.26,
+    "det": 1.0,
+    "train": 1.37,
+    "gap": 0.33,
+    "n": 5
+  },
+  "dodgeball_ppo": {
+    "stoch": 0.65,
+    "std": 0.36,
+    "det": 0.36,
+    "train": 0.67,
+    "gap": 0.02,
+    "n": 5
+  },
+  "dodgeball_a2c": {
+    "stoch": 0.89,
+    "std": 0.1,
+    "det": 1.05,
+    "train": 0.96,
+    "gap": 0.07,
+    "n": 5
+  },
+  "dodgeball_dqn": {
+    "stoch": 0.18,
+    "std": 0.09,
+    "det": 0.14,
+    "train": 0.13,
+    "gap": -0.05,
+    "n": 5
+  },
+  "dodgeball_qrdqn": {
+    "stoch": 0.61,
+    "std": 0.49,
+    "det": 0.34,
+    "train": 0.69,
+    "gap": 0.09,
+    "n": 5
+  },
+  "bossfight_ppo": {
+    "stoch": 0.18,
+    "std": 0.29,
+    "det": 0.15,
+    "train": 0.04,
+    "gap": -0.14,
+    "n": 5
+  },
+  "bossfight_a2c": {
+    "stoch": 0.05,
+    "std": 0.06,
+    "det": 0.63,
+    "train": 0.01,
+    "gap": -0.04,
+    "n": 5
+  },
+  "bossfight_dqn": {
+    "stoch": 0.03,
+    "std": 0.05,
+    "det": 0.06,
+    "train": 0.01,
+    "gap": -0.01,
+    "n": 5
+  },
+  "bossfight_qrdqn": {
+    "stoch": 0.28,
+    "std": 0.5,
+    "det": 0.2,
+    "train": 0.27,
+    "gap": -0.02,
+    "n": 5
+  }
+}
