@@ -671,7 +671,7 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 | HRL flat/skip4/hrl/hrl_learned (§11) | `train_hrl.py` (SKILLS exatas, DUR=4, budget em frames, low π(a\|obs,z)) | smoke 4/4 braços OK |
 | Eval 100+100+15, gap (§3.10–12) | `--eval-eps/--eval-det-eps/--eval-train-eps` + `gen_gap` nos 3 trainers | regressão PPO/DQN/HRL OK |
 | IC/Cohen/AUC (§3.8–3.9) | `stats.py` (t Student, d, trapézio/budget) | `test_stats` valores conhecidos OK |
-| Grades + budget scaling (§2–3.13) | `run_grade.py` (suites main/exploration/algo/hrl/budget, resume `master.json`) | mini-grade 26/26 OK (§15.4.1) |
+| Grades + budget scaling + hard + pilot (§2–3.13) | `run_grade.py` (suites main/exploration/algo/hrl/budget/hard/pilot, `--distribution`, resume `master.json`) | mini-grade 26/26 OK (§15.4.1) |
 | Bench justo SB3-vs-JAX (§15.3) | `bench_sb3_paired.py` + `paired_*.json` | A/B/C medidos |
 
 #### 15.4.1. Evidência de teste (05/09/2026, `/root/procgen-jax`, RTX 4070)
