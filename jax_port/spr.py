@@ -37,8 +37,10 @@ class TransitionMLP(nn.Module):
         return nn.Dense(512)(h)
 
 
-def _norm(x):
-    return x / (jnp.linalg.norm(x, axis=-1, keepdims=True) + 1e-8)
+def _norm(x, eps=1e-6):
+    # sqrt(soma+eps): denominador nunca e zero exato (idem contrast.py).
+    n = jnp.sqrt((x ** 2).sum(axis=-1, keepdims=True) + eps)
+    return x / n
 
 
 def make_spr(backbone_cls, n_actions=15):
@@ -47,7 +49,7 @@ def make_spr(backbone_cls, n_actions=15):
     trans = TransitionMLP(n_actions=n_actions)
     aug = make_augment("crop", p=1.0)
     opt_b = optax.adam(SPR_LR)
-    opt_t = optax.adam(SPR_LR)
+    opt_h = optax.adam(SPR_LR)
 
     def encode(bb_params, x_f, key=None):
         del key
@@ -70,15 +72,18 @@ def make_spr(backbone_cls, n_actions=15):
         (l2, grads) = jax.value_and_grad(
             lambda b, t: loss_fn(b, t), argnums=(0, 1))(bb_p, tr_p)
         upd_b, bb_os = opt_b.update(grads[0], bb_os, bb_p)
-        upd_t, tr_os = opt_t.update(grads[1], tr_os, tr_p)
+        upd_h, h_os = opt_h.update(grads[1], h_os, tr_p)
         bb_p = optax.apply_updates(bb_p, upd_b)
-        tr_p = optax.apply_updates(tr_p, upd_t)
-        return bb_p, bb_os, tr_p, tr_os, l2 * SPR_COEF
+        tr_p = optax.apply_updates(tr_p, upd_h)
+        return bb_p, bb_os, tr_p, h_os, l2 * SPR_COEF
 
     @jax.jit
     def ema(tgt_p, bb_p):
         return jax.tree.map(lambda t, o: SPR_TAU * t + (1.0 - SPR_TAU) * o,
                             tgt_p, bb_p)
 
-    return {"step": step, "ema": ema, "trans": trans, "opt_b": opt_b,
-            "opt_t": opt_t, "backbone": backbone}
+    def init_head(key):
+        return trans.init(key, jnp.zeros((1, 512 + n_actions)))
+
+    return {"step": step, "ema": ema, "init_head": init_head,
+            "opt_b": opt_b, "opt_h": opt_h, "backbone": backbone}
