@@ -95,10 +95,11 @@ def cells(args):
                                         "kind": "hrl", "game": game, "seed": s,
                                         "timesteps": t, "arm": arm})
         elif suite == "budget":
+            bsteps = args.budget_steps or args.timesteps
             for cfg in BUDGET_CONFIGS:
                 for game in (args.games or BUDGET_GAMES):
                     for s in args.seeds:
-                        for t in args.timesteps:
+                        for t in bsteps:
                             out.append({"suite": suite, "cfg": cfg,
                                         "kind": "ppo", "game": game, "seed": s,
                                         "timesteps": t, "extractor": cfg,
@@ -115,7 +116,8 @@ def run_cell(cell, args):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path) and not args.overwrite:
         return {"skipped": path}
-    ee = (100, 100, 15) if args.eval_full else (args.eval_eps, 0, 0)
+    ee = (100, 100, 15) if args.eval_full else (
+        args.eval_eps, args.eval_det_eps, args.eval_train_eps)
     if cell["kind"] == "hrl":
         ns = types.SimpleNamespace(
             game=cell["game"], arm=cell["arm"], frames=cell["timesteps"],
@@ -148,9 +150,15 @@ def main():
     ap.add_argument("--games", nargs="*", default=None)
     ap.add_argument("--seeds", type=int, nargs="+", default=[42])
     ap.add_argument("--timesteps", type=int, nargs="+", default=[100000])
+    ap.add_argument("--budget-steps", type=int, nargs="+", default=None,
+                    help="timesteps so p/ suite budget (default: --timesteps)")
     ap.add_argument("--num-envs", type=int, default=64)
     ap.add_argument("--eval-eps", type=int, default=10)
+    ap.add_argument("--eval-det-eps", type=int, default=0)
+    ap.add_argument("--eval-train-eps", type=int, default=0)
     ap.add_argument("--eval-full", action="store_true")
+    ap.add_argument("--configs", nargs="*", default=None,
+                    help="filtra cfgs (ex. classic mlp mlp_vector ppo icm flat)")
     ap.add_argument("--lr-sens", action="store_true")
     ap.add_argument("--overwrite", action="store_true")
     ap.add_argument("--out-dir", default="jax_port/results_grade")
@@ -162,7 +170,10 @@ def main():
         with open(args.master) as fh:
             master = json.load(fh)
     t0 = time.perf_counter()
-    for i, cell in enumerate(cells(args)):
+    all_cells = cells(args)
+    if args.configs:
+        all_cells = [c for c in all_cells if c["cfg"] in args.configs]
+    for i, cell in enumerate(all_cells):
         key = (f"{cell['suite']}/{cell['cfg']}__{cell['game']}__"
                f"seed{cell['seed']}__{cell['timesteps']//1000}k")
         if key in master and not args.overwrite:

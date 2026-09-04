@@ -683,6 +683,23 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 - Mini-grade runner: 26/26 células (HRL 4 + main 16 + algo 6) em ~6 min, `master.json` resume verificado (re-run pula prontas).
 - Rodar tudo: `wsl -e env PYTHONPATH=... /root/procgen-jax/bin/python -m jax_port.tests.run_tests` (stats+parity+zoo+smoke, ~3 min) e `run_grade.py --suite <s> --games <g> --seeds 42-46 --timesteps 100000 --eval-full` para a grade real.
 
+#### 15.4.2. 50k basta ou 100k? (probe 05/09/2026, classic/mlp × coinrun/starpilot × seeds 42–43, eval 30/30/15)
+
+| Jogo | Extrator | 50k (eval unseen) | 100k (eval unseen) | Δ |
+|---|---|---:|---:|---:|
+| coinrun | classic | 4,50 | 5,00 | +0,50 |
+| coinrun | mlp | 2,50 | 3,00 | +0,50 |
+| starpilot | classic | 2,02 | 3,05 | +1,03 |
+| starpilot | mlp | 1,93 | 2,53 | +0,60 |
+
+> **Veredito:** 50k preserva todas as ordenações (classic>mlp nos 4 pares) e os deltas (+0,5–1,0) são menores que o ruído entre seeds (mlp-coinrun: 0,0 vs 5–6 conforme a seed). Junto com §3.13 (estagnação 100k→500k), a conclusão é: **50k basta para ordenar** (a pergunta do estudo), **100k dá os absolutos + margem**. A grade completa roda 100k (fidelidade de protocolo; custo marginal: ~14 s vs ~8 s de treino).
+
+#### 15.4.3. Quanto o tempo caiu (exemplos medidos, mesma RTX 4070)
+- coinrun 50k, 1 modelo: SB3 ~7 min (§2) → JAX ~8 s de treino (**~50x**).
+- célula 100k: SB3 ~10 min → JAX ~14 s treino + ~40 s eval-full ≈ 1 min ponta-a-ponta (**~10x**).
+- treino de 15 h SB3 (~8M steps): → ~18 min a 7,5k SPS.
+- grade completa (~450 células, 5 suítes × 5 seeds, eval-full): SB3 semanas → JAX ~8–12 h (**rodando em background desde 05/09, `jax_port/results_grade/master_full.json`, resume-safe**; outputs brutos da grade não versionados, só a análise final).
+
 ### 15.3. Benchmark pareado justo — mesma máquina, mesmo dia (05/09/2026, `coinrun`, 100k, seed 42)
 
 Exigência do autor: nada de número impreciso. Protocolo: wall só do `learn()`/loop de treino (sem construção de envs, eval, salvamento ou TensorBoard em nenhum braço); hparams PPO idênticos (lr 3e-4, n_steps 256, 3 epochs, γ 0.99, λ 0.95, clip 0.2); sequencial na mesma RTX 4070 Laptop. Braços: **A** SB3 fiel ao estudo (`DummyVecEnv` n=1, batch 64, `bench_sb3_paired.py`); **B** SB3 paralelo (`SubprocVecEnv` n=64, batch 1024 — mesmo ajuste de batching do porte); **C** JAX (`jax_port/train.py`, 64 envs `gym3`, batch 1024). Correção de ambiente revelada pelo pareamento: o torch do Windows estava CPU-only (`2.13.0+cpu`) e foi restaurado para o pino do estudo (`2.5.1+cu121`, `cuda=True`) antes de medir.

@@ -33,3 +33,6 @@ logs*/
 
 .DS_Store
 Thumbs.db
+
+# outputs brutos da grade JAX (centenas de JSONs; so a analise final e versionada)
+jax_port/results_grade/
