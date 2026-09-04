@@ -1,0 +1,23 @@
+[
+  {
+    "game": "coinrun",
+    "num_envs": 1,
+    "steps": 3000,
+    "fps_env_only": 12618.2,
+    "fps_env_to_gpu": 301.5
+  },
+  {
+    "game": "coinrun",
+    "num_envs": 4,
+    "steps": 3000,
+    "fps_env_only": 13272.9,
+    "fps_env_to_gpu": 910.1
+  },
+  {
+    "game": "coinrun",
+    "num_envs": 16,
+    "steps": 3000,
+    "fps_env_only": 18695.5,
+    "fps_env_to_gpu": 3023.8
+  }
+]

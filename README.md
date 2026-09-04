@@ -573,7 +573,7 @@ A remoção não é perda de trabalho, e sim controle de validade interna:
 
 ### 13.4. O que as seções 14–16 acrescentam
 
-As seções 1–12 estão congeladas como registro do estudo concluído. As seções 14–16 são o **diário de bordo metodológico** exigido pelo autor: documentam, com o mesmo rigor das seções anteriores, **a trajetória, as escolhas, as mudanças e os ajustes** da tentativa de portar este estudo para JAX — incluindo o que funcionou (portão PA0 superado), o que foi removido da árvore e por quê, e qual é o caminho restante (PA1 em diante). Nenhum número das seções 1–12 é reinterpretado aqui; trata-se de metadocumentação do processo, não de novos resultados.
+As seções 1–12 estão congeladas como registro do estudo concluído. As seções 14–16 são o **diário de bordo metodológico** exigido pelo autor: documentam, com o mesmo rigor das seções anteriores, **a trajetória, as escolhas, as mudanças e os ajustes** da tentativa de portar este estudo para JAX — incluindo o que funcionou (portões PA0 e PA1 superados, §14.3 e §15.1), o que foi removido da árvore e por quê, e qual é o caminho restante (PA2 em diante). Nenhum número das seções 1–12 é reinterpretado aqui; trata-se de metadocumentação do processo, não de novos resultados do estudo.
 
 ---
 
@@ -612,7 +612,7 @@ Como pré-condição de PA0, a grade Craftax então em execução foi **parada c
 | 1 | Conflito `numpy`: `procgen` exige `numpy<2.0`, mas a instalação do JAX puxou `numpy 2.2.6` | Dependências divergentes (legado C++ pinado vs. ecossistema JAX recente) | Pinar `numpy==1.26.4` no venv do porte; o aviso residual de `ml-dtypes` é inofensivo (a op JAX de teste executou na GPU) |
 | 2 | `verify` inicial usou `gymnasium`, mas o ProcGen registra seus envs no `gym 0.26.2` (API antiga, `step` de 4-tupla) | O estudo original contorna isso com o wrapper `gym→gymnasium` (`procgen_wrapper.py`); o script de verificação tentou o registro direto no namespace errado | Corrigir o `verify` (`_verify_pg.py`) para a API `gym` legada; via nativa rápida adicional sondada em `_probe_pg3.py` (`gym3`) |
 
-**Validação (portão superado).** Após os ajustes, o critério `PROCGEN_JAX_OK` foi atingido no mesmo venv `py3.10`, headless, em WSL2: `coinrun` abre com obs `(64,64,3)` `uint8` e `Discrete(15)` (API `gym` de 4-tupla), e o JAX executa em `cuda:0`. Versões validadas do alicerce: `JAX 0.6.2` + `flax 0.10.7` + `optax 0.2.8` + `numpy 1.26.4` + `procgen 0.10.7`. Este é o estado sólido sobre o qual PA1 deveria ser construído — e é também o ponto em que a trajetória foi congelada pela decisão de restauração da seção 13.
+**Validação (portão superado, revalidado em 04/09/2026).** Após os ajustes, o critério `PROCGEN_JAX_OK` foi atingido no mesmo venv `py3.10`, headless, em WSL2: `coinrun` abre com obs `(64,64,3)` `uint8` e `Discrete(15)` (API `gym` de 4-tupla), e o JAX executa em `cuda:0` (revalidação: `jax 0.6.2`, `devices=[CudaDevice(id=0)]`, `matmul` soma `1073741824.0` no device). Versões validadas do alicerce: `JAX 0.6.2` + `flax 0.10.7` + `optax 0.2.8` + `numpy 1.26.4` + `procgen 0.10.7` (+ `gym 0.26.2`, `gymnasium 1.3.0`, `gym3 0.3.3` presentes). Este é o estado sólido sobre o qual o PA1 foi construído (§15.1).
 
 ### 14.4. Tabela-resumo das escolhas e ajustes
 
@@ -627,15 +627,37 @@ Como pré-condição de PA0, a grade Craftax então em execução foi **parada c
 
 ---
 
-## 15. Estado Atual, Limites e Próximos Passos (PA1 em diante)
+## 15. Estado Atual, Limites e Próximos Passos (PA1 concluído, PA2 em aberto)
 
-**Estado atual (congelado).** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX está no estágio **PA0 superado, PA1 não iniciado**: existe prova de coexistência (env + GPU no mesmo venv), mas **não** existe ainda pipeline vetorizado CPU→GPU, medição de FPS próprio, reimplementação dos extratores em Flax, nem qualquer número JAX a reportar — e nenhum número JAX é reportado neste README, por princípio.
+**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX está no estágio **PA0 superado + PA1 concluído**: além da prova de coexistência, existe agora pipeline vetorizado CPU→GPU (`jax_port/vector_env.py`, `jax_port/bench_throughput.py`) e medição própria de FPS — sempre no mesmo branch `main`, por decisão do autor (o porte vive em `jax_port/`, sem tocar nos arquivos do estudo). Reimplementação dos extratores em Flax e paridade de treino seguem em aberto (PA2+).
 
-**Próximo passo imediato (PA1).** Sondar o throughput do ProcGen vetorizado (via nativa `gym3`) e construir o loop mínimo CPU-env → learner JAX-GPU, medindo FPS real contra os ~`300` do legado. Só com ganho confirmado faz sentido investir na fidelidade (PA2+).
+### 15.1. PA1 — pipeline e throughput medido (04/09/2026, venv `/root/procgen-jax`, WSL2, `coinrun`, ações aleatórias, 3000 steps)
+
+Comando reproduzível (via WSL, sem dependências de torch/sb3/cv2 no venv do porte):
+
+```bash
+wsl -e env PYTHONPATH=/mnt/c/Users/Acer/Downloads/MLE \
+  /root/procgen-jax/bin/python \
+  /mnt/c/Users/Acer/Downloads/MLE/jax_port/bench_throughput.py \
+  --game coinrun --num-envs 1 4 16 --steps 3000 --seed 42 \
+  --out /mnt/c/Users/Acer/Downloads/MLE/jax_port/pa1_throughput.json
+```
+
+| `num_envs` | FPS só-env (CPU, autoreset) | FPS env→GPU (transfer + `JIT uint8→float32 /255` com sync por step) |
+|---:|---:|---:|
+| 1 | 12.618,2 | 301,5 |
+| 4 | 13.272,9 | 910,1 |
+| 16 | 18.695,5 | 3.023,8 |
+
+Fonte: `jax_port/pa1_throughput.json`. Avisos `gym`/`np.bool8` durante o bench são esperados (API legada do ProcGen, mesma fronteira da seção 14.3).
+
+> **Leitura honesta:** (1) o env cru escala pouco de 1→16 envs (12,6k→18,7k) — loop síncrono single-process em Python; multiprocesso/`gym3` é o ganho futuro. (2) O sync por step (`asarray` + JIT + `block_until_ready` a cada passo) domina o custo: com 1 env, o pipeline entrega ~`300 FPS`, indistinguível do baseline de treino SB3 (~`300 FPS`, seção 1.4) — mas aqui **sem nenhum update de rede**. (3) O batching amortiza o sync: 16 envs → ~`3k FPS` pré-learner, ou seja, ~`10x` de headroom sobre o legado **antes** do custo do PPO. A tese do caminho A continua de pé, com a ressalva explícita de que o FPS de treino real (PA2, com gradientes) será menor que estes 3k. Nenhum número de treino JAX é afirmado aqui.
+
+**Próximo passo (PA2).** Reimplementar os extratores em Flax com paridade de pré-processamento (`HWC→CHW`, `uint8`, `frame_stack=1`) e de PPO (hiperparâmetros da seção 1.4 + GAE/clipping/minibatches), validar paridade numérica num subconjunto e só então estimar o FPS real de treino.
 
 **Riscos conhecidos para PA2+.** Paridade de pré-processamento (`HWC→CHW`, `uint8`, normalização, `frame_stack=1`), paridade de PPO (hiperparâmetros da seção 1.4 + GAE/clipping/minibatches idênticos), paridade de eval (`seed+1000`, `100 eps` stoch+det, gen-gap, IC/Cohen/AUC, budget-scaling) e custo da grade completa (`16×5×5×100k`). A barra de aceitação do porte é explícita: **reproduzir a ordenação e as barras de erro do estudo dentro do ruído entre-seeds**, não apenas "rodar rápido".
 
-**Artefatos removidos, porém recuperáveis.** Os scripts do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`, `bench_throughput.py`, `src/procgen_env.py`, `src/procgen_ppo.py`) foram apagados da árvore por escopo, mas cada um é recuperável via `git show <commit>:<path>` e sua função está descrita na seção 14.3. Se o porte for retomado, recomenda-se recriá-los **fora** desta árvore (repositório ou branch dedicado `jax-port/`), preservando este diretório como registro imutável do estudo SB3.
+**Artefatos do porte (mesmo branch, por decisão do autor).** Os scripts originais do porte (`diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`) foram apagados da árvore na restauração e permanecem só como registro histórico/§14.3 (eram arquivos nunca commitados, portanto não recuperáveis via `git show` — sua função está documentada aqui). O porte retomado vive em `jax_port/` no próprio `main`: `jax_port/vector_env.py` (fronteira fiel a `procgen_wrapper.py:29,41,91`), `jax_port/bench_throughput.py` e `jax_port/pa1_throughput.json`. O diretório do estudo (raiz, `models/`, `results/`) segue intocado.
 
 ---
 
