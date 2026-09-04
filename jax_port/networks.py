@@ -35,3 +35,25 @@ class NatureActorCritic(nn.Module):
 def preprocess(obs):
     """uint8 NHWC -> float32 NHWC [0,1]."""
     return obs.astype(jnp.float32) / 255.0
+
+
+class ActorCritic(nn.Module):
+    """Heads genericos sobre qualquer backbone do zoo (512D -> logits+valor).
+
+    ``stochastic=True`` só para backbones que amostram por forward
+    (VAE): a ``key`` e obrigatoria e z e reamostrado a cada forward,
+    como no estudo.
+    """
+    backbone: nn.Module
+    n_actions: int = 15
+    stochastic: bool = False
+
+    @nn.compact
+    def __call__(self, x, key=None):
+        if self.stochastic:
+            feat = self.backbone(x, key)
+        else:
+            feat = self.backbone(x)
+        logits = nn.Dense(self.n_actions)(feat)
+        value = nn.Dense(1)(feat).squeeze(-1)
+        return logits, value
