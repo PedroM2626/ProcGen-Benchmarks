@@ -545,21 +545,25 @@ Gerados sob demanda via `visualize_side_by_side.py` (comandos na seção 4.8): `
 
 ---
 
-## 13. Nota de Restauração e Escopo (04/09/2026) — por que este README voltou
+## 13. Nota de Restauração e Escopo (04/09/2026) — por que eu trouxe este README de volta
 
 ### 13.1. O que aconteceu
 
-Este repositório passou por três fases distintas, preservadas no histórico Git para auditoria:
+Meu repositório passou por três fases distintas, todas preservadas no histórico Git para auditoria:
 
-1. **Fase ProcGen/SB3 (este estudo, commit `4f84ed3`).** Benchmark sistemático em `ProcGen` real com `Stable-Baselines3`/`PyTorch` — seções 1–12 acima. É o corpo científico deste projeto.
-2. **Fase JAX/Craftax/Brax/MARL (commits `5e88c16`–`6d450fa`).** Reescrita integral para `JAX`/`Flax`/`Optax` com `Craftax`, `Brax`, `MPE`, boxe offline e grade combinatória. Protocolos, budgets, métricas e ambientes **diferentes** do estudo ProcGen (ex.: retorno episódico Craftax simbólico vs. reward ProcGen pixels; `8M` steps vs. `100k`; FPS medidos em workloads distintos).
-3. **Fase porte JAX-do-ProcGen (set/2026, fora do Git principal).** Tentativa de reconstruir o estudo **exato** em `JAX` para obter o mesmo desenho experimental com ~`10x` mais velocidade (detalhes na seção 14).
+1. **Fase ProcGen/SB3 (este estudo, commit `4f84ed3`).** Meu benchmark sistemático em `ProcGen` real com `Stable-Baselines3`/`PyTorch` — seções 1–12 acima. É o corpo científico do projeto.
+2. **Fase JAX/Craftax/Brax/MARL (commits `5e88c16`–`6d450fa`).** Eu reescrevi tudo para `JAX`/`Flax`/`Optax` com `Craftax`, `Brax`, `MPE`, boxe offline e grade combinatória. Protocolos, budgets, métricas e ambientes **diferentes** do estudo ProcGen (ex.: retorno episódico Craftax simbólico vs. reward ProcGen pixels; `8M` steps vs. `100k`; FPS medidos em workloads distintos).
+3. **Fase porte JAX-do-ProcGen (set/2026).** Minha tentativa de reconstruir o estudo **exato** em `JAX` para obter o mesmo desenho experimental com muito mais velocidade (detalhes na seção 14).
 
-Em `04/09/2026`, por decisão explícita do autor, **todo o conteúdo das fases 2–3 foi removido da árvore de trabalho** e o projeto foi **restaurado ao estado exato do commit `4f84ed3`** (`RL-Experiments-Lab@4f84ed3`, espelhado aqui como `MLE@4f84ed3`). As seções 1–12 acima são, portanto, **byte-a-byte o README do estudo ProcGen original** — nenhum número, tabela ou conclusão foi alterado nesta restauração.
+Em `04/09/2026`, por minha decisão explícita, **eu removi todo o conteúdo das fases 2–3 da árvore de trabalho** e **restaurei o projeto ao estado exato do commit `4f84ed3`**. As seções 1–12 acima são, portanto, **byte-a-byte o README do meu estudo ProcGen original** — eu não alterei nenhum número, tabela ou conclusão nesta restauração.
 
-### 13.2. Justificativa acadêmica da remoção
+### 13.1.1. Por que eu voltei para o ProcGen (a conta que eu fiz)
 
-A remoção não é perda de trabalho, e sim controle de validade interna:
+Eu medi e comparei: o tempo de treino no Craftax estava saindo **quase o mesmo do ProcGen** (runs de milhões de steps, grades de horas), mas com **bem menos profundidade acadêmica** — sem o protocolo publicado de generalização (`200` treino vs. `0` unseen), sem as 16 arquiteturas × 5 jogos × 5 seeds, sem IC/Cohen/AUC/eval-duplo/budget-scaling. Eu estava pagando o mesmo preço de GPU por uma fração do rigor. A conta não fechava, então eu decidi que **compensava mais voltar para o ProcGen e tentar deixar ele mais rápido** — manter o estudo profundo e atacar o único defeito dele (velocidade) com o porte JAX, em vez de aceitar um estudo raso e rápido. É exatamente o que as seções 14–16 documentam.
+
+### 13.2. Minha justificativa acadêmica da remoção
+
+Eu não vejo a remoção como perda de trabalho, e sim como controle de validade interna:
 
 - **Validade de construto.** Misturar no mesmo `README`/`results/` dois benchmarks com semânticas de reward, horizontes e budgets distintos (`Craftax 8M` vs. `ProcGen 100k`) convida à comparação inválida entre números incomensuráveis. A literatura de generalização em RL (Cobbe et al., ProcGen) exige protocolo fixo por estudo.
 - **Reprodutibilidade.** O estudo ProcGen depende de `Python ≤3.10` + `procgen 0.10.7` + `gym 0.26.2` + `torch cu121` (seção 5 e `requirements.txt`), enquanto a suíte JAX exigia `Python 3.12` + `jax 0.11` + `craftax`/`brax`. Manter ambos no mesmo venv/requirements quebra a instalação nos dois lados (o conflito `numpy<2` vs. `numpy 2.x` da seção 14.3 é o exemplo mínimo).
@@ -567,13 +571,13 @@ A remoção não é perda de trabalho, e sim controle de validade interna:
 
 ### 13.3. O que foi apagado e o que foi restaurado
 
-**Apagado da árvore (permanence no Git):** `src/` (trainers JAX: `ppo.py`, `dqn.py`, `marl_*`, `continuous_rl.py`, `offline_rl.py`, `recurrent_ppo.py`, `eval_utils.py`, `procgen_parity_modules.py`, `procgen_env.py`, `procgen_ppo.py`), `experiments/` (12 benchmarks JAX/Craftax/Brax/MARL), `figures/` (9 figuras JAX), `results/` JAX (`*_benchmarks_results.json`, `boxing_*`, `dataset_boxing_expert.npz`, `procgen_parity_master_results.json`, `combinatorial_grid_results.json`, `results/logs/`, `boxing_final_results.txt`), scripts JAX (`run_all_procgen_combinations.py`, `run_combinatorial_grid.py`, `run_convergence_*.sh`, `run_full_benchmark.py`, `run_smoke_test.py`, `bench_*.py`, `smoke_procgen.py`, `diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`), caches (`.jax_compile_cache/`, `__pycache__/`).
+**Apagado da árvore (mas preservado no Git):** `src/` (trainers JAX: `ppo.py`, `dqn.py`, `marl_*`, `continuous_rl.py`, `offline_rl.py`, `recurrent_ppo.py`, `eval_utils.py`, `procgen_parity_modules.py`, `procgen_env.py`, `procgen_ppo.py`), `experiments/` (12 benchmarks JAX/Craftax/Brax/MARL), `figures/` (9 figuras JAX), `results/` JAX (`*_benchmarks_results.json`, `boxing_*`, `dataset_boxing_expert.npz`, `procgen_parity_master_results.json`, `combinatorial_grid_results.json`, `results/logs/`, `boxing_final_results.txt`), scripts JAX (`run_all_procgen_combinations.py`, `run_combinatorial_grid.py`, `run_convergence_*.sh`, `run_full_benchmark.py`, `run_smoke_test.py`, `bench_*.py`, `smoke_procgen.py`, `diag_env.sh`, `probe_procgen.sh`, `setup_procgen_env.sh`, `_verify_pg.py`, `_probe_pg3.py`), caches (`.jax_compile_cache/`, `__pycache__/`).
 
 **Restaurado ao estado `4f84ed3`:** todos os `compare_*.py` na raiz, `models/` (`sb3_extractors.py`, `cnn_attention.py`, `cnn_classic.py`, `combined_extractors.py`, `world_model_extractors.py`), `procgen_wrapper.py`, `*_analysis.py`, `re_eval_*.py`, `visualize_*.py`, `requirements.txt` pinado (ProcGen), `.gitignore` original e `results/` originais (JSONs + PNGs das seções 3–12).
 
 ### 13.4. O que as seções 14–16 acrescentam
 
-As seções 1–12 estão congeladas como registro do estudo concluído. As seções 14–16 são o **diário de bordo metodológico** exigido pelo autor: documentam, com o mesmo rigor das seções anteriores, **a trajetória, as escolhas, as mudanças e os ajustes** da tentativa de portar este estudo para JAX — incluindo o que funcionou (portões PA0 e PA1 superados, §14.3 e §15.1), o que foi removido da árvore e por quê, e qual é o caminho restante (PA2 em diante). Nenhum número das seções 1–12 é reinterpretado aqui; trata-se de metadocumentação do processo, não de novos resultados do estudo.
+As seções 1–12 estão congeladas como registro do meu estudo concluído. As seções 14–16 são o **meu diário de bordo metodológico**: eu documento nelas, com o mesmo rigor das anteriores, **minha trajetória, minhas escolhas, mudanças e ajustes** ao portar este estudo para JAX — incluindo o que funcionou (portões PA0 e PA1 superados, §14.3 e §15.1), o que eu removi da árvore e por quê, e qual é o caminho restante (PA2 em diante). Eu não reinterpreto nenhum número das seções 1–12 aqui; trata-se de metadocumentação do meu processo, não de novos resultados do estudo.
 
 ---
 
@@ -581,31 +585,31 @@ As seções 1–12 estão congeladas como registro do estudo concluído. As seç
 
 ### 14.1. Objetivo real e caminho escolhido (caminho A)
 
-O objetivo declarado não era "mais benchmarks em JAX", e sim **"o estudo do ProcGen, só que mais rápido"**. Diante das opções, o autor escolheu explicitamente o **caminho A — portar o estudo ProcGen fielmente para JAX**:
+Meu objetivo nunca foi "mais benchmarks em JAX", e sim **"o estudo do ProcGen, só que mais rápido"**. Diante das opções, eu escolhi explicitamente o **caminho A — portar meu estudo ProcGen fielmente para JAX**:
 
 > Reconstruir o estudo **exato** em JAX: ProcGen real (`envpool`/CPU) + **16 arquiteturas × 5 jogos × 5 seeds × 100k** + **IC 95% / Cohen's d / AUC / eval-duplo (stoch+det) / budget-scaling**. Ganho esperado de ~**10x** sobre o throughput SB3 (~`300 FPS` legado em `cuda`), sem alterar o desenho experimental.
 
 As alternativas rejeitadas foram: (B) manter a suíte JAX/Craftax como substituto do ProcGen — rejeitada porque Craftax simbólico/pixels e ProcGen pixels têm dinâmicas, espaços de observação e regimes de generalização distintos, de modo que "PPO ≫ DQN no Craftax" não responde "qual extrator generaliza melhor no ProcGen"; e (C) reimplementar ProcGen em JAX puro — rejeitada por ser inviável (o ProcGen é C++/OpenGL, com geração procedural proprietária; reescrevê-lo introduziria um novo ambiente, não uma aceleração do mesmo).
 
-O caminho A impunha, portanto, uma arquitetura híbrida inédita neste repositório: **pipeline CPU-env + learner JAX** — ambientes ProcGen vetorizados em CPU alimentando um learner PPO em JAX na GPU. Esse pipeline não existia aqui e constitui o trabalho novo central.
+O caminho A me impôs, portanto, uma arquitetura híbrida inédita neste repositório: **pipeline CPU-env + learner JAX** — ambientes ProcGen vetorizados em CPU alimentando um learner PPO em JAX na GPU. Esse pipeline não existia aqui e é o meu trabalho novo central.
 
 ### 14.2. Plano em fases e contenção de recursos
 
-Antes de qualquer código de learner, foi estabelecido um plano em fases com portões de viabilidade:
+Antes de qualquer código de learner, eu estabeleci um plano em fases com portões de viabilidade:
 
 - **PA0 (compatibilidade):** provar que `procgen 0.10.7` e `jax[cuda12]` coexistem e funcionam (env + GPU) num mesmo interpretador. Critério de passagem: `PROCGEN_JAX_OK` — abrir `coinrun` headless e executar uma op JAX em `cuda:0` no mesmo venv.
 - **PA1 (throughput):** construir o pipeline vetorizado CPU→GPU e medir FPS real contra os ~`300` do legado SB3.
 - **PA2+ (fidelidade):** reimplementar os 16 extratores e o protocolo completo (IC/Cohen/AUC/eval-duplo/budget-scaling) e validar paridade numérica num subconjunto antes da grade completa.
 
-Como pré-condição de PA0, a grade Craftax então em execução foi **parada com segurança** (JSON de resultados parciais preservado para retomada) a fim de liberar a GPU, e o ambiente foi diagnosticado com `diag_env.sh`. Essa contenção — um experimento por vez na GPU de 8 GB — replica a disciplina já adotada na suíte JAX (`run_convergence_phase*.sh`) e evita OOM por contenção de VRAM.
+Como pré-condição de PA0, eu parei com segurança a grade Craftax então em execução (JSON de resultados parciais preservado para retomada) a fim de liberar a GPU, e diagnostiquei o ambiente com `diag_env.sh`. Essa contenção — um experimento por vez na GPU de 8 GB — replica a disciplina já adotada na suíte JAX (`run_convergence_phase*.sh`) e evita OOM por contenção de VRAM.
 
 ### 14.3. Portão PA0 — diagnóstico, obstáculo, probe e superação
 
 **Diagnóstico (falha inicial, informativa).** O venv então ativo era `Python 3.12` + `JAX 0.11.1` + `cuda:0` funcional, mas `pip` não encontrava **nenhuma** versão do `procgen`: o `procgen 0.10.7` não publica wheel para `cp312`. O sistema possuía apenas `Python 3.12` (sem `3.10`/`3.9`, sem `conda`/`pyenv`), e o ProcGen exige `py≤3.10` por ser extensão C++ pré-compilada. Ferramentas de build presentes: `gcc`/`g++`/`make` (sem `cmake`) — compilar do fonte seria frágil e lento. Sem resolver isso, investir no learner JAX seria desperdício: daí o caráter de portão.
 
-**Probe de viabilidade (`probe_procgen.sh`).** Duas perguntas factuais foram respondidas antes de qualquer `apt`: (1) existe wheel `manylinux` de `procgen 0.10.7` para `cp310`? Sim — `procgen-0.10.7-cp310-cp310-manylinux...whl`, instalação limpa sem compilação; (2) há rede e meio de obter `Python 3.10` no `Ubuntu 24.04` (cujos repos oficiais não o trazem)? Sim, via PPA `deadsnakes`. Veredito: **VIÁVEL**.
+**Probe de viabilidade (`probe_procgen.sh`).** Eu respondi duas perguntas factuais antes de qualquer `apt`: (1) existe wheel `manylinux` de `procgen 0.10.7` para `cp310`? Sim — `procgen-0.10.7-cp310-cp310-manylinux...whl`, instalação limpa sem compilação; (2) há rede e meio de obter `Python 3.10` no `Ubuntu 24.04` (cujos repos oficiais não o trazem)? Sim, via PPA `deadsnakes`. Veredito: **VIÁVEL**.
 
-**Construção do ambiente (`setup_procgen_env.sh`, executado em background por envolver `apt` + ~2 GB de `jax[cuda12]`).** Caminho executado: `Python 3.10` (deadsnakes) + venv dedicado + `procgen` (wheel) + `jax[cuda12]`. Estágios 1–2 (interpretador + venv) concluídos rapidamente; o estágio longo foi o download/instalação do JAX CUDA. O primeiro `verify` falhou por dois motivos instrutivos, ambos corrigidos e documentados como ajustes:
+**Construção do ambiente (`setup_procgen_env.sh`, que eu executei em background por envolver `apt` + ~2 GB de `jax[cuda12]`).** Caminho que eu executei: `Python 3.10` (deadsnakes) + venv dedicado + `procgen` (wheel) + `jax[cuda12]`. Estágios 1–2 (interpretador + venv) concluídos rapidamente; o estágio longo foi o download/instalação do JAX CUDA. O primeiro `verify` falhou por dois motivos instrutivos, ambos corrigidos e documentados como ajustes:
 
 | # | Sintoma no `verify` | Causa-raiz | Ajuste adotado |
 |---|---|---|---|
@@ -629,7 +633,7 @@ Como pré-condição de PA0, a grade Craftax então em execução foi **parada c
 
 ## 15. Estado Atual, Limites e Próximos Passos (PA2-velocidade concluído; paridade em aberto)
 
-**Estado atual.** A árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). O porte JAX, no mesmo branch `main` (diretório `jax_port/`, sem tocar nos arquivos do estudo), cobre **todo o projeto**: zoo de 13 extratores, PPO/A2C, DQN/QR-DQN, ICM/RND/NGU, augments, HRL 4 braços, eval stoch+det+gap, stats (IC/Cohen/AUC) e grade runner — tudo testado (§15.4). Em aberto: *executar* a grade completa multi-seed (o código está pronto e testado; o custo estimado é ~2–4 h).
+**Estado atual.** Minha árvore de trabalho é o estudo ProcGen/SB3 integral e reproduzível (seções 1–12, seção 5 para reprodução). Meu porte JAX, no mesmo branch `main` (diretório `jax_port/`, sem tocar nos arquivos do estudo), cobre **todo o projeto**: zoo de 13 extratores, PPO/A2C, DQN/QR-DQN, ICM/RND/NGU, augments, HRL 4 braços, eval stoch+det+gap, stats (IC/Cohen/AUC) e grade runner — tudo testado (§15.4). Em aberto: *executar* a grade completa multi-seed (o código está pronto e testado; o custo estimado é ~2–4 h).
 
 ### 15.1. PA1 — pipeline e throughput medido (04/09/2026, venv `/root/procgen-jax`, WSL2, `coinrun`, ações aleatórias, 3000 steps)
 
@@ -705,7 +709,7 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 
 ### 15.3. Benchmark pareado justo — mesma máquina, mesmo dia (05/09/2026, `coinrun`, 100k, seed 42)
 
-Exigência do autor: nada de número impreciso. Protocolo: wall só do `learn()`/loop de treino (sem construção de envs, eval, salvamento ou TensorBoard em nenhum braço); hparams PPO idênticos (lr 3e-4, n_steps 256, 3 epochs, γ 0.99, λ 0.95, clip 0.2); sequencial na mesma RTX 4070 Laptop. Braços: **A** SB3 fiel ao estudo (`DummyVecEnv` n=1, batch 64, `bench_sb3_paired.py`); **B** SB3 paralelo (`SubprocVecEnv` n=64, batch 1024 — mesmo ajuste de batching do porte); **C** JAX (`jax_port/train.py`, 64 envs `gym3`, batch 1024). Correção de ambiente revelada pelo pareamento: o torch do Windows estava CPU-only (`2.13.0+cpu`) e foi restaurado para o pino do estudo (`2.5.1+cu121`, `cuda=True`) antes de medir.
+Minha exigência aqui: nada de número impreciso. Protocolo: wall só do `learn()`/loop de treino (sem construção de envs, eval, salvamento ou TensorBoard em nenhum braço); hparams PPO idênticos (lr 3e-4, n_steps 256, 3 epochs, γ 0.99, λ 0.95, clip 0.2); sequencial na mesma RTX 4070 Laptop. Braços: **A** SB3 fiel ao estudo (`DummyVecEnv` n=1, batch 64, `bench_sb3_paired.py`); **B** SB3 paralelo (`SubprocVecEnv` n=64, batch 1024 — mesmo ajuste de batching do porte); **C** JAX (`jax_port/train.py`, 64 envs `gym3`, batch 1024). Correção de ambiente revelada pelo pareamento: o torch do Windows estava CPU-only (`2.13.0+cpu`) e foi restaurado para o pino do estudo (`2.5.1+cu121`, `cuda=True`) antes de medir.
 
 | Braço | Steps | Wall treino | **SPS** | Fonte |
 |---|---|---:|---:|---|
