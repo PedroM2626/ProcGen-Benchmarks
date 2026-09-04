@@ -671,7 +671,7 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 | HRL flat/skip4/hrl/hrl_learned (§11) | `train_hrl.py` (SKILLS exatas, DUR=4, budget em frames, low π(a\|obs,z)) | smoke 4/4 braços OK |
 | Eval 100+100+15, gap (§3.10–12) | `--eval-eps/--eval-det-eps/--eval-train-eps` + `gen_gap` nos 3 trainers | regressão PPO/DQN/HRL OK |
 | IC/Cohen/AUC (§3.8–3.9) | `stats.py` (t Student, d, trapézio/budget) | `test_stats` valores conhecidos OK |
-| Grades + budget scaling + hard + pilot + SPR-extensão (§2–3.13) | `run_grade.py` (suites main/exploration/algo/hrl/budget/hard/pilot/spr, `--distribution`, resume `master.json`) + `spr.py` | mini-grade 26/26 OK (§15.4.1) |
+| Grades + budget scaling + hard + pilot + extensões (§2–3.13) | `run_grade.py` (suites main/exploration/algo/hrl/budget/hard/pilot/spr/gnn, `--distribution`, resume `master.json`) + `spr.py` | mini-grade 26/26 OK (§15.4.1) |
 | Bench justo SB3-vs-JAX (§15.3) | `bench_sb3_paired.py` + `paired_*.json` | A/B/C medidos |
 
 #### 15.4.1. Evidência de teste (05/09/2026, `/root/procgen-jax`, RTX 4070)
@@ -698,8 +698,9 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 - coinrun 50k, 1 modelo: SB3 ~7 min (§2) → JAX ~8 s de treino (**~50x**).
 - célula 100k: SB3 ~10 min → JAX ~14 s treino + ~40 s eval-full ≈ 1 min ponta-a-ponta (**~10x**).
 - treino de 15 h SB3 (~8M steps): → ~18 min a 7,5k SPS.
-- grade completa (~555 células, 8 suítes × 5 seeds, eval-full): SB3 semanas → JAX ~6–8 h (**rodando em background desde 05/09, `jax_port/results_grade/master_full.json`, resume-safe**; outputs brutos da grade não versionados, só a análise final).
+- grade completa (~570 células, 9 suítes × 5 seeds, eval-full): SB3 semanas → JAX ~6–8 h (**rodando em background desde 05/09, `jax_port/results_grade/master_full.json`, resume-safe**; outputs brutos da grade não versionados, só a análise final).
 - **SPR (extensão, fora da paridade):** `spr.py` — encoder compartilhado + target EMA (τ=0.99) + transição MLP, MSE em latentes normalizados com crop próprio, Adam aux 1e-4; suíte `spr` (classic+spr, classic+spr+crop × 3 jogos × 5 seeds). Smoke: loss 0.0036 finita, treino funcional.
+- **GAT (extensão, fora da paridade):** `GATPatch` — grafo sobre 64 patches 8×8 (grade+self), 2× GAT 4 heads + residual/LayerNorm, mean-pool → FC512 (141k params); inexistente no estudo ProcGen. Suíte `gnn` (gat × 3 jogos × 5 seeds). Smoke coinrun: ret 6,0, treino OK.
 
 ### 15.3. Benchmark pareado justo — mesma máquina, mesmo dia (05/09/2026, `coinrun`, 100k, seed 42)
 
