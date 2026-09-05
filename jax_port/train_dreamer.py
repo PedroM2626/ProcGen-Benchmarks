@@ -33,6 +33,10 @@ IMAG_B = 32
 LAM = 0.95
 GAMMA = 0.99
 ENT = 3e-4
+
+
+def symlog(x):
+    return jnp.sign(x) * jnp.log1p(jnp.abs(x))
 EMA_TAU = 0.02
 
 
@@ -84,7 +88,7 @@ def kl_gauss(mu_q, lv_q, mu_p, lv_p):
     return 0.5 * ((v_q + (mu_q - mu_p) ** 2) / v_p - 1 + lv_p - lv_q).sum(-1)
 
 
-def make_wm_update(wm, opt):
+def make_wm_update(wm, opt, reward_mode="raw", w_dyn=0.5, w_rep=0.1):
     @jax.jit
     def update(params, opt_state, obs_f, act, rew, cont, key):
         B, L = act.shape
@@ -100,9 +104,11 @@ def make_wm_update(wm, opt):
             bce = -(obs_f[:, :-1] * jnp.log(o + 1e-7) +
                     (1 - obs_f[:, :-1]) * jnp.log(1 - o + 1e-7)).mean()
             rl = ((r - rew) ** 2).mean()
+            if reward_mode == "symlog":
+                rl = ((r - symlog(rew)) ** 2).mean()
             cl = -(cont * jnp.log(jax.nn.sigmoid(c) + 1e-7) +
                    (1 - cont) * jnp.log(1 - jax.nn.sigmoid(c) + 1e-7)).mean()
-            return bce + rl + cl + 0.1 * kl_rep + 0.5 * kl_dyn
+            return bce + rl + cl + w_rep * kl_rep + w_dyn * kl_dyn
         loss, grads = jax.value_and_grad(loss_fn)(params)
         upd, opt_state = opt.update(grads, opt_state, params)
         return optax.apply_updates(params, upd), opt_state, loss
@@ -116,6 +122,10 @@ def main():
     ap.add_argument("--frames", type=int, default=1000000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--num-envs", type=int, default=16)
+    ap.add_argument("--reward-mode", default="symlog", choices=["raw", "symlog"])
+    ap.add_argument("--ent-coef", type=float, default=3e-4)
+    ap.add_argument("--kl-dyn", type=float, default=0.5)
+    ap.add_argument("--kl-rep", type=float, default=0.1)
     ap.add_argument("--out", default="jax_port/dreamer_run.json")
     ap.add_argument("--out-dir", default="jax_port/dreams")
     args = ap.parse_args()
@@ -142,10 +152,11 @@ def main():
     wstate = (wparams, wopt.init(wparams))
     astate = (aparams, aopt.init(aparams))
     cstate = (cparams, copt.init(cparams))
-    wm_upd = make_wm_update(wm, wopt)
+    wm_upd = make_wm_update(wm, wopt, reward_mode=args.reward_mode,
+                            w_dyn=args.kl_dyn, w_rep=args.kl_rep)
 
     @jax.jit
-    def ac_train(a_s, c_s, ct, rssm_p, dec_p, f0, key):
+    def ac_train(a_s, c_s, ct, rssm_p, dec_p, f0, key, ent_coef):
         keys = jax.random.split(key, IMAG_H)
         # loop Python desenrolado (idem WorldModel): sem lax.scan sobre
         # chamadas Flax.
@@ -190,7 +201,7 @@ def main():
             _, rets = jax.lax.scan(lam_ret, tv[-1],
                                    (rews, conts, vv, tv), reverse=True)
             al = -(rets * jnp.exp(logp - jax.lax.stop_gradient(logp))).mean() \
-                - ENT * ent
+                - ent_coef * ent
             cl = ((vv - jax.lax.stop_gradient(rets)) ** 2).mean()
             return al + cl, (al, cl)
 
@@ -324,7 +335,7 @@ def main():
             rssm_p = {"params": wparams_w["params"]["rssm"]}
             dec_p = {"params": wparams_w["params"]["decoder"]}
             astate, cstate, tot, al, cl = ac_train(
-                astate, cstate, ctgt, rssm_p, dec_p, f0, kac)
+                astate, cstate, ctgt, rssm_p, dec_p, f0, kac, args.ent_coef)
             ctgt = jax.tree.map(
                 lambda t, o: (1 - EMA_TAU) * t + EMA_TAU * o, ctgt,
                 cstate[0])
@@ -335,6 +346,8 @@ def main():
               f"eps={len(ep_rets)}", flush=True)
     dt = time.perf_counter() - t0
     out = {"game": args.game, "seed": args.seed, "algo": "dreamer",
+           "reward_mode": args.reward_mode, "ent_coef": args.ent_coef,
+           "kl_dyn": args.kl_dyn, "kl_rep": args.kl_rep,
            "frames": frames, "wall_s": round(dt, 1),
            "sps": round(frames / dt, 1),
            "train_episodes": len(ep_rets),
