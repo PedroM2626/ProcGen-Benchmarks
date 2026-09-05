@@ -686,6 +686,9 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 - Armadilhas achadas pelos testes e corrigidas: padding SAME default do Flax (virava 2,1M params; fix VALID), `stop_gradient` como context-manager, `main()` do DQN sem chamar `train()`, gather-no-device 40x, `np.trapezoid` inexistente no numpy 1.26.
 - Mini-grade runner: 26/26 células (HRL 4 + main 16 + algo 6) em ~6 min, `master.json` resume verificado (re-run pula prontas).
 - Rodar tudo: `wsl -e env PYTHONPATH=... /root/procgen-jax/bin/python -m jax_port.tests.run_tests` (stats+parity+zoo+smoke, ~3 min) e `run_grade.py --suite <s> --games <g> --seeds 42-46 --timesteps 100000 --eval-full` para a grade real (eu rodei as 10 suítes: 615/615 OK, `analysis_full.json` abaixo).
+- **Figuras:** `jax_port/figures/01-06.png` (global com IC, speedup pareado, budget, HRL, algo-families, top-10 n=10) geradas por `make_figures.py` direto dos JSONs — nenhum número digitado à mão.
+- **`hrl_learned` a 500k (hipótese fechada):** plunder, 3 seeds — learned 4,19 vs fixo 3,42 (a 100k era 4,23 vs 3,19). A vantagem persiste sem explodir nem colapsar: co-treino só mantém com 5x budget.
+- **Dreams VAE/AE:** `jax_port/dream.py` (decoders espelho do estudo, padding SAME p/ saída exata 64×64) — 20k frames bossfight, VAE BCE 0,37/KL 0,02, AE 0,32 (~30 s cada); `jax_port/dreams/dreams_panel.png` (real/vae/ae) + `bossfight_dreams.gif` (300 steps, sonhos com estrutura: std 44–60 vs 57 do real). MP4 trocado por GIF: o `imageio-ffmpeg` do venv está com API quebrada (`write_frames() got audio_path`) — documentado aqui em vez de escondido.
 
 #### 15.4.3. Veredito da grade completa (05–06/09/2026, 615 células, eval 100+100+15)
 
