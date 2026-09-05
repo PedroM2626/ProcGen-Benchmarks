@@ -1,0 +1,18 @@
+{
+  "framework": "sb3",
+  "game": "maze",
+  "seed": 42,
+  "vec": "subproc",
+  "n_envs": 32,
+  "batch_size": 1024,
+  "timesteps": 106496,
+  "wall_learn_s": 13.7,
+  "sps": 7774.5,
+  "torch": "2.5.1+cu121",
+  "cuda": true,
+  "eval_unseen": {
+    "mean": 5.333,
+    "std": 4.989,
+    "eps": 30
+  }
+}

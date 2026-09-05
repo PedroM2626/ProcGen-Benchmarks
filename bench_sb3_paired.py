@@ -39,6 +39,7 @@ def main():
     ap.add_argument("--timesteps", type=int, default=100000)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--eval-eps", type=int, default=0)
     ap.add_argument("--out", default="sb3_bench.json")
     args = ap.parse_args()
     _CFG.update(game=args.game, seed=args.seed)
@@ -69,6 +70,19 @@ def main():
            "wall_learn_s": round(dt, 1), "sps": round(actual / dt, 1),
            "torch": torch.__version__,
            "cuda": torch.cuda.is_available()}
+    if args.eval_eps > 0:
+        from stable_baselines3.common.evaluation import evaluate_policy
+        from stable_baselines3.common.monitor import Monitor
+        from procgen_wrapper import make_procgen_env as _mp
+        ev = DummyVecEnv([lambda: Monitor(_mp(
+            args.game, num_levels=0, distribution_mode="easy",
+            seed=args.seed + 1000, frame_stack=1, vector=False))])
+        mean, std = evaluate_policy(model, ev, n_eval_episodes=args.eval_eps,
+                                    deterministic=False)
+        out["eval_unseen"] = {"mean": round(float(mean), 3),
+                              "std": round(float(std), 3),
+                              "eps": args.eval_eps}
+        ev.close()
     with open(args.out, "w") as fh:
         json.dump(out, fh, indent=2)
     print(json.dumps(out, indent=2), flush=True)

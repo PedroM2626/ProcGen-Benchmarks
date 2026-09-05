@@ -180,8 +180,8 @@ def run_cell(cell, args):
     if cell["kind"] == "hrl":
         ns = types.SimpleNamespace(
             game=cell["game"], arm=cell["arm"], frames=cell["timesteps"],
-            seed=cell["seed"], num_envs=args.num_envs, rollout=128,
-            minibatch=1024, eval_eps=ee[0], eval_det_eps=ee[1],
+            seed=cell["seed"], num_envs=args.num_envs, rollout=args.rollout,
+            minibatch=args.minibatch, eval_eps=ee[0], eval_det_eps=ee[1],
             eval_train_eps=ee[2], eval_envs=8, out=path)
         return H.train(ns)
     if cell["kind"] in ("dqn", "qrdqn"):
@@ -198,8 +198,8 @@ def run_cell(cell, args):
         obs=None, augment=cell.get("augment", "none"),
         explore=cell.get("explore", "none"), aux=cell.get("aux", "none"),
         timesteps=cell["timesteps"],
-        seed=cell["seed"], num_envs=args.num_envs, rollout=128,
-        minibatch=1024, eval_eps=ee[0], eval_det_eps=ee[1],
+        seed=cell["seed"], num_envs=args.num_envs, rollout=args.rollout,
+        minibatch=args.minibatch, eval_eps=ee[0], eval_det_eps=ee[1],
         eval_train_eps=ee[2], eval_envs=8, out=path)
     return T.train(ns)
 
@@ -216,6 +216,8 @@ def main():
     ap.add_argument("--budget-steps", type=int, nargs="+", default=None,
                     help="timesteps so p/ suite budget (default: --timesteps)")
     ap.add_argument("--num-envs", type=int, default=64)
+    ap.add_argument("--rollout", type=int, default=128)
+    ap.add_argument("--minibatch", type=int, default=1024)
     ap.add_argument("--eval-eps", type=int, default=10)
     ap.add_argument("--eval-det-eps", type=int, default=0)
     ap.add_argument("--eval-train-eps", type=int, default=0)
