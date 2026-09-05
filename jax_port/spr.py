@@ -56,7 +56,7 @@ def make_spr(backbone_cls, n_actions=15):
         return backbone.apply({"params": bb_params}, x_f)
 
     @jax.jit
-    def step(bb_p, bb_os, tr_p, tr_os, tgt_p, ot_u8, act, on_u8, key):
+    def step(bb_p, bb_os, h_p, h_os, tgt_p, ot_u8, act, on_u8, key):
         k1, k2, k3 = jax.random.split(key, 3)
         xt = aug(ot_u8.astype(jnp.float32) / 255.0, k1)
         xn = aug(on_u8.astype(jnp.float32) / 255.0, k2)
@@ -70,12 +70,12 @@ def make_spr(backbone_cls, n_actions=15):
             return ((_norm(pred) - _norm(tgt)) ** 2).mean()
 
         (l2, grads) = jax.value_and_grad(
-            lambda b, t: loss_fn(b, t), argnums=(0, 1))(bb_p, tr_p)
+            lambda b, t: loss_fn(b, t), argnums=(0, 1))(bb_p, h_p)
         upd_b, bb_os = opt_b.update(grads[0], bb_os, bb_p)
-        upd_h, h_os = opt_h.update(grads[1], h_os, tr_p)
+        upd_h, h_os = opt_h.update(grads[1], h_os, h_p)
         bb_p = optax.apply_updates(bb_p, upd_b)
-        tr_p = optax.apply_updates(tr_p, upd_h)
-        return bb_p, bb_os, tr_p, h_os, l2 * SPR_COEF
+        h_p = optax.apply_updates(h_p, upd_h)
+        return bb_p, bb_os, h_p, h_os, l2 * SPR_COEF
 
     @jax.jit
     def ema(tgt_p, bb_p):

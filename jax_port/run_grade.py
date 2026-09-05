@@ -239,7 +239,8 @@ def main():
     for i, cell in enumerate(all_cells):
         key = (f"{cell['suite']}/{cell['cfg']}__{cell['game']}__"
                f"seed{cell['seed']}__{cell['timesteps']//1000}k")
-        if key in master and not args.overwrite:
+        prev = master.get(key)
+        if prev and prev.get("ok") and not args.overwrite:
             print(f"[{i}] skip {key}", flush=True)
             continue
         print(f"[{i}] {key}", flush=True)
