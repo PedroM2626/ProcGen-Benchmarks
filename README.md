@@ -685,7 +685,17 @@ Cada linha do estudo tem par JAX em `jax_port/`, com fidelidade auditável e tes
 - `test_smoke`: treino MLP ponta-a-ponta em processo (`SMOKE_OK`).
 - Armadilhas achadas pelos testes e corrigidas: padding SAME default do Flax (virava 2,1M params; fix VALID), `stop_gradient` como context-manager, `main()` do DQN sem chamar `train()`, gather-no-device 40x, `np.trapezoid` inexistente no numpy 1.26.
 - Mini-grade runner: 26/26 células (HRL 4 + main 16 + algo 6) em ~6 min, `master.json` resume verificado (re-run pula prontas).
-- Rodar tudo: `wsl -e env PYTHONPATH=... /root/procgen-jax/bin/python -m jax_port.tests.run_tests` (stats+parity+zoo+smoke, ~3 min) e `run_grade.py --suite <s> --games <g> --seeds 42-46 --timesteps 100000 --eval-full` para a grade real.
+- Rodar tudo: `wsl -e env PYTHONPATH=... /root/procgen-jax/bin/python -m jax_port.tests.run_tests` (stats+parity+zoo+smoke, ~3 min) e `run_grade.py --suite <s> --games <g> --seeds 42-46 --timesteps 100000 --eval-full` para a grade real (eu rodei as 10 suítes: 615/615 OK, `analysis_full.json` abaixo).
+
+#### 15.4.3. Veredito da grade completa (05–06/09/2026, 615 células, eval 100+100+15)
+
+Eu executei tudo: main 240 + exploration 40 + algo 70 + hrl 40 + budget 60 + hard 55 + pilot 20 + spr 30 + gnn 15 + aux 45. Minha leitura honesta, conclusão por conclusão:
+
+- **Paridade CONFIRMADA no essencial.** Global top-6 em 1,32–1,24 com CIs sobrepostos (`d=0,27`) — replica o headline do estudo (top indistinguível, §3.12). Algo-famílias replicam o estudo quase exatamente: policy>value nos 3 jogos, `qrdqn` lidera `bossfight`, `a2c≈ppo`, sensibilidade de lr irrelevante. Plunder: `hrl_learned` vence (4,23), como no estudo. Exploração: empate técnico ppo≈icm≈rnd≈ngu, como no protocolo definitivo.
+- **Top-1 por jogo difere, dentro do ruído esperado.** Meus top-1 (`aug_noise` global, `contrastive` starpilot, `resnet18` bossfight) ≠ os do estudo (`mlp_vector`, `mlp`, `aug_crop`), mas todos com `d≤0,4` e CIs sobrepostos — ou seja, a lição de §3.8 se aplica ao meu próprio porte: com 5 seeds, trocar o campeão é ruído, não refutação.
+- **Discrepâncias absolutas em aberto (não escondidas).** `maze` (5,1 vs 2,8), `heist` (2,6 vs 0,7) e `jumper-flat` (4,1 vs 0,9) vieram maiores; `bossfight` veio menor (0,16 vs 0,68). Hipótese principal: meu batching (64 envs, minibatches 1024) tem dinâmica de aprendizado distinta do SB3 (1 env, batch 64) — 16x menos grad-steps por env-step, porém mais estáveis. Follow-up proposto: parear volume de updates (mesmo nº de grad-steps/step) para isolar batching de implementação.
+- **Budget (§3.13):** `mlp` sobe devagar (2,04→2,74 starpilot), `resnet18` fica plano/cai — compatível com "mais budget não decide nada".
+- **Extensões (sem baseline no estudo):** `gat` no pelotão global (~1,3); `spr_aug>spr`; `acl>curl/cpc` nos 3 jogos; `hard` achata tudo em ~0,05.
 
 #### 15.4.2. 50k basta ou 100k? (probe 05/09/2026, classic/mlp × coinrun/starpilot × seeds 42–43, eval 30/30/15)
 
